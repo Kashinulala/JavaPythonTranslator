@@ -1,0 +1,1197 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using Antlr4.Runtime;
+using Antlr4.Runtime.Misc;
+using Antlr4.Runtime.Tree;
+using LexerParserLibrary;
+
+namespace LexerParserLibrary
+{
+    // Класс для хранения информации о символах
+
+    public class SymbolInfo
+    {
+        public string Name { get; set; }
+        public string Type { get; set; }
+        public string Scope { get; set; }
+        public bool IsInitialized { get; set; }
+        public bool IsFinal { get; set; }
+        public bool IsStatic { get; set; }
+    }
+
+    // Класс таблицы символов для управления областями видимости
+    public class SymbolTable
+    {
+        private readonly Stack<Dictionary<string, SymbolInfo>> _scopes = new Stack<Dictionary<string, SymbolInfo>>();
+        private readonly Stack<string> _scopeNames = new Stack<string>();
+        private readonly Dictionary<string, string> _classTypes = new Dictionary<string, string>();
+
+        public SymbolTable()
+        {
+            // Глобальная область видимости
+            EnterScope("global");
+        }
+
+        public void EnterScope(string scopeName)
+        {
+            _scopeNames.Push(scopeName);
+            _scopes.Push(new Dictionary<string, SymbolInfo>());
+        }
+
+        public void ExitScope()
+        {
+            if (_scopes.Count > 1) // Не выходим из глобальной области
+            {
+                _scopes.Pop();
+                _scopeNames.Pop();
+            }
+        }
+
+        public string GetCurrentScope()
+        {
+            return _scopeNames.Peek();
+        }
+
+        public void Declare(string name, string type, bool isFinal = false, bool isStatic = false)
+        {
+            if (IsDeclaredInCurrentScope(name))
+            {
+                throw new SemanticException($"Symbol '{name}' is already declared in current scope");
+            }
+
+            var symbol = new SymbolInfo
+            {
+                Name = name,
+                Type = type,
+                Scope = GetCurrentScope(),
+                IsFinal = isFinal,
+                IsStatic = isStatic
+            };
+
+            _scopes.Peek()[name] = symbol;
+
+            // Если это объявление класса, сохраняем его тип
+            if (GetCurrentScope() == "global" && type == "class")
+            {
+                _classTypes[name] = type;
+            }
+        }
+
+        public bool IsDeclared(string name)
+        {
+            foreach (var scope in _scopes)
+            {
+                if (scope.ContainsKey(name))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public bool IsDeclaredInCurrentScope(string name)
+        {
+            return _scopes.Peek().ContainsKey(name);
+        }
+
+        public SymbolInfo GetSymbol(string name)
+        {
+            foreach (var scope in _scopes)
+            {
+                if (scope.TryGetValue(name, out var symbol))
+                {
+                    return symbol;
+                }
+            }
+            return null;
+        }
+
+        public bool IsClass(string name)
+        {
+            return _classTypes.ContainsKey(name);
+        }
+    }
+
+    // Исключение для семантических ошибок
+    public class SemanticException : Exception
+    {
+        public int Line { get; }
+        public int Column { get; }
+
+        public SemanticException(string message, int line = -1, int column = -1)
+            : base(message)
+        {
+            Line = line;
+            Column = column;
+        }
+    }
+
+    // Семантический анализатор
+    public class SemanticAnalyzer : JavaGrammarBaseVisitor<object>
+    {
+        private readonly SymbolTable _symbolTable = new SymbolTable();
+        private readonly List<SemanticException> _errors = new List<SemanticException>();
+
+        public IEnumerable<SemanticException> Errors => _errors;
+        public bool HasErrors => _errors.Count > 0;
+
+        // Анализ всего файла
+        public override object VisitCompilationUnit(JavaGrammarParser.CompilationUnitContext context)
+        {
+            try
+            {
+                return base.VisitCompilationUnit(context);
+            }
+            catch (SemanticException ex)
+            {
+                _errors.Add(ex);
+                return null;
+            }
+        }
+
+        // Обработка класса
+        public override object VisitClassDeclaration(JavaGrammarParser.ClassDeclarationContext context)
+        {
+            string className = context.identifier().GetText();
+
+            // Проверяем, что имя класса начинается с заглавной буквы
+            if (!char.IsUpper(className[0]))
+            {
+                ReportError($"Class name '{className}' should start with uppercase letter", context);
+            }
+
+            // Добавляем класс в глобальную область видимости
+            _symbolTable.Declare(className, "class");
+
+            // Входим в область видимости класса
+            _symbolTable.EnterScope(className);
+
+            // Обрабатываем тело класса
+            var result = Visit(context.classBody());
+
+            // Выходим из области видимости класса
+            _symbolTable.ExitScope();
+
+            return result;
+        }
+
+        // Обработка метода
+        public override object VisitMethodDeclaratorRest(JavaGrammarParser.MethodDeclaratorRestContext context)
+        {
+            var parentCtx = context.Parent;
+
+            // Находим объявление метода
+            JavaGrammarParser.MethodOrFieldDeclContext methodDecl = null;
+            var current = parentCtx;
+            while (current != null)
+            {
+                if (current is JavaGrammarParser.MethodOrFieldDeclContext decl)
+                {
+                    methodDecl = decl;
+                    break;
+                }
+                current = current.Parent;
+            }
+
+            if (methodDecl != null)
+            {
+                string methodName = methodDecl.identifier().GetText();
+                string returnType = GetTypeName(methodDecl.type());
+
+                // Проверяем соглашения об именовании для методов
+                if (char.IsUpper(methodName[0]))
+                {
+                    ReportError($"Method name '{methodName}' should start with lowercase letter", context);
+                }
+
+                // Входим в область видимости метода
+                _symbolTable.EnterScope(methodName);
+
+                // Обрабатываем параметры метода
+                if (context.formalParameters() != null)
+                {
+                    Visit(context.formalParameters());
+                }
+
+                // Обрабатываем тело метода
+                if (context.block() != null)
+                {
+                    Visit(context.block());
+                }
+
+                // Выходим из области видимости метода
+                _symbolTable.ExitScope();
+            }
+
+            return null;
+        }
+
+        // Обработка параметров метода
+        public override object VisitFormalParameterDecls(JavaGrammarParser.FormalParameterDeclsContext context)
+        {
+            string paramType = GetTypeName(context.type());
+            var rest = context.formalParameterDeclsRest();
+
+            if (rest != null && rest.variableDeclaratorId() != null)
+            {
+                string paramName = rest.variableDeclaratorId().GetText();
+                _symbolTable.Declare(paramName, paramType);
+            }
+
+            return null;
+        }
+
+        // Обработка объявления переменных
+        public override object VisitVariableDeclarator(JavaGrammarParser.VariableDeclaratorContext context)
+        {
+            string varName = context.identifier().GetText();
+            var parentCtx = context.Parent;
+
+            string varType = "unknown";
+            bool isFinal = false;
+            bool isStatic = false;
+
+            // Определяем тип переменной и модификаторы из контекста
+            if (parentCtx is JavaGrammarParser.FieldDeclaratorsRestContext fieldRest)
+            {
+                var fieldParent = fieldRest.Parent as JavaGrammarParser.MethodOrFieldRestContext;
+                if (fieldParent != null)
+                {
+                    var methodOrFieldParent = fieldParent.Parent as JavaGrammarParser.MethodOrFieldDeclContext;
+                    if (methodOrFieldParent != null)
+                    {
+                        varType = GetTypeName(methodOrFieldParent.type());
+
+                        // Проверяем модификаторы
+                        var current = methodOrFieldParent.Parent;
+                        while (current != null)
+                        {
+                            if (current is JavaGrammarParser.MemberClassBodyDeclarationContext memberDecl)
+                            {
+                                foreach (var modifier in memberDecl.modifier())
+                                {
+                                    if (modifier.GetText() == "final")
+                                        isFinal = true;
+                                    if (modifier.GetText() == "static")
+                                        isStatic = true;
+                                }
+                                break;
+                            }
+                            current = current.Parent as ParserRuleContext;
+                        }
+                    }
+                }
+            }
+            else if (parentCtx is JavaGrammarParser.VariableDeclaratorsContext varDecls)
+            {
+                var localVarDecl = GetParentOfType<JavaGrammarParser.LocalVariableDeclarationStatementContext>(varDecls);
+                if (localVarDecl != null)
+                {
+                    varType = GetTypeName(localVarDecl.type());
+                }
+            }
+
+            try
+            {
+                // Проверяем дублирование имен
+                if (_symbolTable.IsDeclaredInCurrentScope(varName))
+                {
+                    ReportError($"Variable '{varName}' is already declared in this scope", context);
+                }
+                else
+                {
+                    _symbolTable.Declare(varName, varType, isFinal, isStatic);
+                }
+
+                // Проверяем инициализацию final переменных
+                if (context.variableDeclaratorRest().variableInitializer() != null)
+                {
+                    Visit(context.variableDeclaratorRest().variableInitializer());
+                    var symbol = _symbolTable.GetSymbol(varName);
+                    if (symbol != null)
+                    {
+                        symbol.IsInitialized = true;
+                    }
+                }
+            }
+            catch (SemanticException ex)
+            {
+                _errors.Add(ex);
+            }
+
+            return null;
+        }
+
+        // Обработка использования переменных (идентификаторов)
+        public override object VisitIdentifier(JavaGrammarParser.IdentifierContext context)
+        {
+            string name = context.GetText();
+
+            // Не проверяем специальные идентификаторы типа "class", "this", "super"
+            if (name == "class" || name == "this" || name == "super")
+            {
+                return null;
+            }
+
+            // Проверяем, что переменная объявлена
+            if (!_symbolTable.IsDeclared(name))
+            {
+                // Дополнительная проверка для констант вроде System.out
+                if (!name.Contains("."))
+                {
+                    ReportError($"Variable '{name}' is used but not declared", context);
+                }
+            }
+
+            return null;
+        }
+
+        // Обработка выражений присваивания
+        public override object VisitAssignmentExpression(JavaGrammarParser.AssignmentExpressionContext context)
+        {
+            // Проверяем левую часть присваивания
+            var left = context.expression(0);
+
+            // Проверяем, является ли левая часть выражением, содержащим идентификатор
+            if (left is JavaGrammarParser.PrimaryExpressionContext primaryExpr)
+            {
+                string varName = null;
+
+                var expr1 = primaryExpr.expression1();
+
+                if (expr1 != null)
+                {
+                    // Получаем первый expression2 из expression1
+                    JavaGrammarParser.Expression2Context expr2 = null;
+
+                    if (expr1 is JavaGrammarParser.SimpleExpression2Context simpleExpr2)
+                    {
+                        expr2 = simpleExpr2.expression2();
+                    }
+                    else if (expr1 is JavaGrammarParser.InfixExpressionContext infixExpr &&
+                             infixExpr.expression2().Length > 0)
+                    {
+                        expr2 = infixExpr.expression2()[0];
+                    }
+
+                    // Проверяем, является ли expr2 PostfixExpressionContext
+                    if (expr2 is JavaGrammarParser.PostfixExpressionContext postfixExpr)
+                    {
+                        var primary = postfixExpr.primary();
+
+                        if (primary is JavaGrammarParser.IdentifierPrimaryContext identifierPrimary &&
+                            identifierPrimary.identifier().Length > 0)
+                        {
+                            varName = identifierPrimary.identifier()[0].GetText();
+                        }
+                    }
+                }
+
+                if (varName != null)
+                {
+                    // Проверяем, существует ли переменная
+                    var symbol = _symbolTable.GetSymbol(varName);
+                    if (symbol == null)
+                    {
+                        ReportError($"Variable '{varName}' is not declared", left);
+                    }
+                    else if (symbol.IsFinal && symbol.IsInitialized)
+                    {
+                        // Проверяем, что final переменные не переинициализируются
+                        ReportError($"Final variable '{varName}' cannot be reassigned", left);
+                    }
+                }
+            }
+
+            // Обрабатываем обе части выражения
+            Visit(context.expression(0));
+            Visit(context.expression(1));
+
+            return null;
+        }
+
+        // Обработка блоков кода (новая область видимости)
+        public override object VisitBlock(JavaGrammarParser.BlockContext context)
+        {
+            string scopeName = $"block_{context.Start.Line}_{context.Start.Column}";
+            _symbolTable.EnterScope(scopeName);
+            var result = base.VisitBlock(context);
+            _symbolTable.ExitScope();
+            return result;
+        }
+
+        // Обработка статических блоков
+        public override object VisitStaticBlockClassBodyDeclaration(JavaGrammarParser.StaticBlockClassBodyDeclarationContext context)
+        {
+            _symbolTable.EnterScope("static_initializer");
+            var result = base.VisitStaticBlockClassBodyDeclaration(context);
+            _symbolTable.ExitScope();
+            return result;
+        }
+
+        // Помощник для получения родительского контекста определенного типа
+        private T GetParentOfType<T>(ParserRuleContext context) where T : ParserRuleContext
+        {
+            while (context != null)
+            {
+                if (context is T result)
+                {
+                    return result;
+                }
+                context = context.Parent as ParserRuleContext;
+            }
+            return null;
+        }
+
+        // Помощник для получения типа из контекста
+        private string GetTypeName(JavaGrammarParser.TypeContext context)
+        {
+            if (context == null) return "unknown";
+
+            // Проверяем, является ли это базовым типом
+            if (context is JavaGrammarParser.BasicTypeTypeContext basicTypeCtx &&
+                basicTypeCtx.basicType() != null)
+            {
+                return basicTypeCtx.basicType().GetText();
+            }
+
+            // Проверяем, является ли это ссылочным типом
+            if (context is JavaGrammarParser.ReferenceTypeTypeContext refTypeCtx &&
+                refTypeCtx.referenceType() != null)
+            {
+                var refType = refTypeCtx.referenceType();
+                if (refType.identifier().Length > 0)
+                {
+                    return refType.identifier()[0].GetText();
+                }
+            }
+
+            return "unknown";
+        }
+
+        // Сообщение об ошибке
+        private void ReportError(string message, ParserRuleContext context)
+        {
+            int line = context.Start.Line;
+            int column = context.Start.Column;
+            _errors.Add(new SemanticException(message, line, column));
+        }
+
+        // Анализ базовых типов
+        public override object VisitBasicType(JavaGrammarParser.BasicTypeContext context)
+        {
+            string typeName = context.GetText().ToLower();
+            return typeName;
+        }
+
+        // Анализ ссылочных типов
+        public override object VisitReferenceType(JavaGrammarParser.ReferenceTypeContext context)
+        {
+            if (context.identifier().Length > 0)
+            {
+                string typeName = context.identifier()[0].GetText();
+                return typeName;
+            }
+            return "unknown";
+        }
+
+        // Анализ условных операторов if
+        public override object VisitIfStatement(JavaGrammarParser.IfStatementContext context)
+        {
+            // Проверяем тип условия в if
+            var condition = context.parExpression().expression();
+            string conditionType = GetExpressionType(condition);
+
+            if (conditionType != "boolean")
+            {
+                ReportError($"If condition must be of boolean type, found: {conditionType}", context);
+            }
+
+            // Рекурсивно обрабатываем ветки then/else
+            Visit(context.statement(0)); // then branch
+
+            if (context.ELSE() != null && context.statement().Length > 1)
+            {
+                Visit(context.statement(1)); // else branch
+            }
+
+            return null;
+        }
+
+        // Анализ цикла for
+        public override object VisitForStatement(JavaGrammarParser.ForStatementContext context)
+        {
+            var forControl = context.forControl();
+
+            // Обрабатываем тело цикла
+            Visit(context.statement());
+
+            return null;
+        }
+
+        // Анализ цикла while
+        public override object VisitWhileStatement(JavaGrammarParser.WhileStatementContext context)
+        {
+            // Проверяем тип условия в while
+            var condition = context.parExpression().expression();
+            string conditionType = GetExpressionType(condition);
+
+            if (conditionType != "boolean")
+            {
+                ReportError($"While condition must be of boolean type, found: {conditionType}", context);
+            }
+
+            // Обрабатываем тело цикла
+            Visit(context.statement());
+
+            return null;
+        }
+
+        // Анализ оператора return
+        public override object VisitReturnStatement(JavaGrammarParser.ReturnStatementContext context)
+        {
+            // Проверяем, что return находится внутри метода
+            var currentScope = _symbolTable.GetCurrentScope();
+            if (currentScope == "global" || currentScope.StartsWith("block_") || currentScope == "static_initializer")
+            {
+                ReportError("Return statement not allowed outside of a method", context);
+                return base.VisitReturnStatement(context);
+            }
+
+            // Если есть выражение после return
+            if (context.expression() != null)
+            {
+                string returnType = GetExpressionType(context.expression());
+                string methodReturnType = GetMethodReturnType(currentScope);
+
+                if (methodReturnType == "void")
+                {
+                    ReportError("Cannot return a value from a void method", context);
+                }
+                else if (!AreTypesCompatible(returnType, methodReturnType))
+                {
+                    ReportError($"Incompatible return type: {returnType} cannot be converted to {methodReturnType}", context);
+                }
+            }
+            else
+            {
+                // Нет выражения после return
+                string methodReturnType = GetMethodReturnType(currentScope);
+                if (methodReturnType != "void" && !IsVoidEquivalentType(methodReturnType))
+                {
+                    ReportError($"Missing return value for method with return type {methodReturnType}", context);
+                }
+            }
+
+            return base.VisitReturnStatement(context);
+        }
+
+        // Анализ создания объектов через new
+        public override object VisitNewCreatorPrimary(JavaGrammarParser.NewCreatorPrimaryContext context)
+        {
+            if (context.creator() != null)
+            {
+                var createdName = context.creator().createdName();
+                if (createdName != null && createdName.identifier().Length > 0)
+                {
+                    string className = createdName.identifier()[0].GetText();
+                    if (!_symbolTable.IsClass(className))
+                    {
+                        ReportError($"Class '{className}' is not declared", context);
+                    }
+                }
+            }
+
+            return base.VisitNewCreatorPrimary(context);
+        }
+
+        // Вспомогательный метод для определения типа выражения
+        private string GetExpressionType(JavaGrammarParser.ExpressionContext context)
+        {
+            if (context == null) return "unknown";
+
+            // Для литералов определяем тип напрямую
+            if (context is JavaGrammarParser.PrimaryExpressionContext primaryExpr)
+            {
+                var expr1 = primaryExpr.expression1();
+
+                if (expr1 != null)
+                {
+                    JavaGrammarParser.Expression2Context expr2 = null;
+
+                    if (expr1 is JavaGrammarParser.SimpleExpression2Context simpleExpr2)
+                    {
+                        expr2 = simpleExpr2.expression2();
+                    }
+                    else if (expr1 is JavaGrammarParser.InfixExpressionContext infixExpr &&
+                             infixExpr.expression2().Length > 0)
+                    {
+                        expr2 = infixExpr.expression2()[0];
+                    }
+
+                    if (expr2 is JavaGrammarParser.PostfixExpressionContext postfixExpr)
+                    {
+                        var primary = postfixExpr.primary();
+
+                        if (primary is JavaGrammarParser.LiteralPrimaryContext literalPrimary)
+                        {
+                            var literal = literalPrimary.literal();
+                            if (literal.INTEGER_LITERAL() != null) return "int";
+                            if (literal.FLOATING_POINT_LITERAL() != null) return "double";
+                            if (literal.CHARACTER_LITERAL() != null) return "char";
+                            if (literal.STRING_LITERAL() != null) return "String";
+                            if (literal.TRUE() != null || literal.FALSE() != null) return "boolean";
+                            if (literal.NULL() != null) return "null";
+                        }
+                    }
+                }
+            }
+
+            // Для идентификаторов ищем в таблице символов
+            if (context.GetText().All(c => char.IsLetterOrDigit(c) || c == '_'))
+            {
+                var symbol = _symbolTable.GetSymbol(context.GetText());
+                if (symbol != null)
+                {
+                    return symbol.Type;
+                }
+            }
+
+            return "unknown";
+        }
+
+        // Анализ аргументов типа в дженериках (например, <String, Integer>)
+        public override object VisitTypeArguments(JavaGrammarParser.TypeArgumentsContext context)
+        {
+            // Проверяем каждый тип в списке аргументов
+            var referenceTypeList = context.referenceTypeList();
+            if (referenceTypeList != null)
+            {
+                foreach (var refType in referenceTypeList.referenceType())
+                {
+                    if (refType.identifier().Length > 0)
+                    {
+                        string typeName = refType.identifier()[0].GetText();
+                        if (!_symbolTable.IsClass(typeName) && typeName != "T" && typeName != "E" && typeName != "K" && typeName != "V")
+                        {
+                            // Проверяем только конкретные классы, не параметры типа
+                            ReportError($"Type '{typeName}' is not declared", refType);
+                        }
+                    }
+                }
+            }
+
+            return base.VisitTypeArguments(context);
+        }
+
+        // Анализ инфиксных выражений (a + b, a && b, a == b и т.д.)
+        public override object VisitInfixExpression(JavaGrammarParser.InfixExpressionContext context)
+        {
+            // Сначала анализируем все операнды
+            var expr2List = context.expression2();
+            if (expr2List == null || expr2List.Length < 2)
+                return base.VisitInfixExpression(context);
+
+            // Получаем типы левого и правого операндов
+            string leftType = GetExpression2Type(expr2List[0]);
+            string rightType = GetExpression2Type(expr2List[1]);
+
+            // Проверяем операторы
+            var infixOps = context.infixOp();
+            foreach (var op in infixOps)
+            {
+                string operatorText = op.GetText();
+
+                // Проверка совместимости типов для операторов
+                switch (operatorText)
+                {
+                    case "&&":
+                    case "||":
+                        // Логические операторы работают только с boolean
+                        if (leftType != "boolean" || rightType != "boolean")
+                        {
+                            ReportError($"Logical operator '{operatorText}' requires boolean operands, found {leftType} and {rightType}", op);
+                        }
+                        break;
+
+                    case "==":
+                    case "!=":
+                        // Операторы равенства могут работать с совместимыми типами
+                        if (!AreTypesCompatible(leftType, rightType))
+                        {
+                            ReportError($"Incompatible types for comparison: {leftType} and {rightType}", op);
+                        }
+                        break;
+
+                    case "<":
+                    case ">":
+                    case "<=":
+                    case ">=":
+                        // Операторы сравнения работают только с числовыми типами
+                        if (!IsNumericType(leftType) || !IsNumericType(rightType))
+                        {
+                            ReportError($"Relational operator '{operatorText}' requires numeric operands, found {leftType} and {rightType}", op);
+                        }
+                        break;
+
+                    case "+":
+                        // Сложение может быть числовой операцией или конкатенацией строк
+                        if (!(IsNumericType(leftType) && IsNumericType(rightType)) &&
+                            !(leftType == "String" || rightType == "String"))
+                        {
+                            ReportError($"Operator '+' not applicable to types {leftType} and {rightType}", op);
+                        }
+                        break;
+
+                    case "-":
+                    case "*":
+                    case "/":
+                    case "%":
+                        // Арифметические операторы работают только с числовыми типами
+                        if (!IsNumericType(leftType) || !IsNumericType(rightType))
+                        {
+                            ReportError($"Arithmetic operator '{operatorText}' requires numeric operands, found {leftType} and {rightType}", op);
+                        }
+                        break;
+                }
+            }
+
+            return base.VisitInfixExpression(context);
+        }
+
+        private string GetExpression2Type(JavaGrammarParser.Expression2Context context)
+        {
+            if (context == null) return "unknown";
+
+            // Для простоты определяем тип по литералам
+            if (context is JavaGrammarParser.PostfixExpressionContext postfixExpr)
+            {
+                var primary = postfixExpr.primary();
+
+                if (primary is JavaGrammarParser.LiteralPrimaryContext literalPrimary)
+                {
+                    var literal = literalPrimary.literal();
+                    if (literal.INTEGER_LITERAL() != null) return "int";
+                    if (literal.FLOATING_POINT_LITERAL() != null) return "double";
+                    if (literal.CHARACTER_LITERAL() != null) return "char";
+                    if (literal.STRING_LITERAL() != null) return "String";
+                    if (literal.TRUE() != null || literal.FALSE() != null) return "boolean";
+                    if (literal.NULL() != null) return "null";
+                }
+
+                // Если это идентификатор, пытаемся найти его в таблице символов
+                if (primary is JavaGrammarParser.IdentifierPrimaryContext idPrimary &&
+                    idPrimary.identifier().Length > 0)
+                {
+                    string varName = idPrimary.identifier()[0].GetText();
+                    var symbol = _symbolTable.GetSymbol(varName);
+                    return symbol?.Type ?? "unknown";
+                }
+            }
+
+            return "unknown";
+        }
+
+        // Анализ префиксных выражений (!a, +a, -a и т.д.)
+        // Анализ префиксных выражений (!a, +a, -a и т.д.)
+        public override object VisitPrefixExpression(JavaGrammarParser.PrefixExpressionContext context)
+        {
+            var prefixOp = context.prefixOp();
+            var expr2 = context.expression2();
+
+            if (prefixOp == null || expr2 == null)
+                return base.VisitPrefixExpression(context);
+
+            string operatorText = prefixOp.GetText();
+            string operandType = GetExpression2Type(expr2);
+
+            switch (operatorText)
+            {
+                case "!":
+                    // Логическое НЕ работает только с boolean
+                    if (operandType != "boolean")
+                    {
+                        ReportError($"Operator '!' requires boolean operand, found {operandType}", prefixOp);
+                    }
+                    break;
+
+                case "+":
+                case "-":
+                    // Унарные плюс и минус работают только с числовыми типами
+                    if (!IsNumericType(operandType))
+                    {
+                        ReportError($"Unary operator '{operatorText}' requires numeric operand, found {operandType}", prefixOp);
+                    }
+                    break;
+            }
+
+            return base.VisitPrefixExpression(context);
+        }
+
+        // Анализ постфиксных выражений (a++, a--)
+        public override object VisitPostfixExpression(JavaGrammarParser.PostfixExpressionContext context)
+        {
+            var primary = context.primary();
+            var postfixOp = context.postfixOp();
+
+            if (postfixOp == null || primary == null)
+                return base.VisitPostfixExpression(context);
+
+            string operatorText = postfixOp.GetText();
+            string exprType = "unknown";
+
+            // Определяем тип основного выражения
+            if (primary is JavaGrammarParser.IdentifierPrimaryContext idPrimary &&
+                idPrimary.identifier().Length > 0)
+            {
+                string varName = idPrimary.identifier()[0].GetText();
+                var symbol = _symbolTable.GetSymbol(varName);
+
+                if (symbol != null)
+                {
+                    exprType = symbol.Type;
+
+                    // Проверяем, что переменная не final для инкремента/декремента
+                    if (symbol.IsFinal)
+                    {
+                        ReportError($"Cannot modify final variable '{varName}' with operator '{operatorText}'", postfixOp);
+                    }
+                }
+                else
+                {
+                    ReportError($"Variable '{varName}' is not declared", primary);
+                }
+            }
+
+            // Инкремент/декремент работают только с числовыми типами
+            if (!IsNumericType(exprType))
+            {
+                ReportError($"Postfix operator '{operatorText}' requires numeric operand, found {exprType}", postfixOp);
+            }
+
+            return base.VisitPostfixExpression(context);
+        }
+
+        // Вспомогательные методы
+
+        private bool IsNumericType(string type)
+        {
+            if (type == null) return false;
+
+            type = type.ToLower();
+            return type == "int" || type == "long" || type == "float" ||
+                   type == "double" || type == "byte" || type == "short" ||
+                   type == "char";
+        }
+
+        private bool AreTypesCompatible(string type1, string type2)
+        {
+            if (type1 == null || type2 == null) return false;
+
+            // Приводим к нижнему регистру для сравнения
+            type1 = type1.ToLower();
+            type2 = type2.ToLower();
+
+            // Одинаковые типы всегда совместимы
+            if (type1 == type2) return true;
+
+            // Числовые типы совместимы между собой
+            if (IsNumericType(type1) && IsNumericType(type2)) return true;
+
+            // Специальные случаи приведения
+            if ((type1 == "string" && type2 == "null") ||
+                (type1 == "null" && type2 == "string"))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        // Анализ создания объектов и массивов
+        public override object VisitCreator(JavaGrammarParser.CreatorContext context)
+        {
+            if (context.createdName() != null)
+            {
+                Visit(context.createdName());
+            }
+
+            if (context.classCreatorRest() != null)
+            {
+                Visit(context.classCreatorRest());
+            }
+
+            if (context.arrayCreatorRest() != null)
+            {
+                Visit(context.arrayCreatorRest());
+            }
+
+            return base.VisitCreator(context);
+        }
+
+        // Анализ имени создаваемого класса
+        public override object VisitCreatedName(JavaGrammarParser.CreatedNameContext context)
+        {
+            if (context.identifier().Length > 0)
+            {
+                string className = context.identifier()[0].GetText();
+
+                // Проверяем, существует ли класс
+                if (!_symbolTable.IsClass(className))
+                {
+                    ReportError($"Class '{className}' is not declared", context);
+                }
+
+                // Если есть дженерики, проверяем их для каждого идентификатора
+                var typeArgsList = context.typeArgumentsOrDiamond();
+                if (typeArgsList != null && typeArgsList.Length > 0)
+                {
+                    // Проверяем дженерики для первого идентификатора
+                    Visit(typeArgsList[0]);
+
+                    // Проверяем дженерики для остальных идентификаторов
+                    for (int i = 1; i < typeArgsList.Length; i++)
+                    {
+                        if (i < context.identifier().Length)
+                        {
+                            Visit(typeArgsList[i]);
+                        }
+                    }
+                }
+
+                // Проверяем квалифицированные имена (например, java.util.List)
+                for (int i = 1; i < context.identifier().Length; i++)
+                {
+                    string part = context.identifier()[i].GetText();
+                    // Дополнительные проверки для внутренних классов можно добавить здесь
+                }
+            }
+
+            return base.VisitCreatedName(context);
+        }
+
+        // Анализ создания объектов классов с аргументами конструктора
+        public override object VisitClassCreatorRest(JavaGrammarParser.ClassCreatorRestContext context)
+        {
+            // Проверяем аргументы конструктора
+            if (context.arguments() != null)
+            {
+                var expressionList = context.arguments().expressionList();
+                if (expressionList != null)
+                {
+                    foreach (var expr in expressionList.expression())
+                    {
+                        string exprType = GetExpressionType(expr);
+                        // Здесь можно добавить проверку соответствия параметров конструктору,
+                        // но для этого нужна более сложная система типов
+                    }
+                }
+            }
+
+            // Проверяем анонимные классы
+            if (context.classBody() != null)
+            {
+                // Для анонимных классов создаём новую область видимости
+                string anonClassName = $"AnonymousClass_{context.Start.Line}_{context.Start.Column}";
+                _symbolTable.EnterScope(anonClassName);
+                Visit(context.classBody());
+                _symbolTable.ExitScope();
+            }
+
+            return base.VisitClassCreatorRest(context);
+        }
+
+        // Анализ создания массивов
+        public override object VisitArrayCreatorRest(JavaGrammarParser.ArrayCreatorRestContext context)
+        {
+            // Случай: new int[] {1, 2, 3}
+            if (context.arrayInitializer() != null)
+            {
+                Visit(context.arrayInitializer());
+            }
+            // Случай: new int[5]
+            else if (context.expression(0) != null)
+            {
+                // Проверяем, что размер массива - целое число
+                string sizeType = GetExpressionType(context.expression(0));
+                if (sizeType != "int")
+                {
+                    ReportError($"Array size must be an integer, found {sizeType}", context.expression(0));
+                }
+
+                // Если есть дополнительные размеры (многомерные массивы)
+                if (context.expression().Length > 1)
+                {
+                    for (int i = 1; i < context.expression().Length; i++)
+                    {
+                        string dimType = GetExpressionType(context.expression(i));
+                        if (dimType != "int")
+                        {
+                            ReportError($"Array dimension must be an integer, found {dimType}", context.expression(i));
+                        }
+                    }
+                }
+            }
+
+            return base.VisitArrayCreatorRest(context);
+        }
+
+        // Анализ инициализаторов массивов
+        public override object VisitArrayInitializer(JavaGrammarParser.ArrayInitializerContext context)
+        {
+            // Проверяем элементы массива
+            var variableInitializers = context.variableInitializers();
+            if (variableInitializers != null)
+            {
+                string arrayType = "unknown";
+                bool firstElement = true;
+
+                foreach (var initializer in variableInitializers.variableInitializer())
+                {
+                    string elementType = "unknown";
+
+                    if (initializer.expression() != null)
+                    {
+                        elementType = GetExpressionType(initializer.expression());
+                    }
+                    else if (initializer.arrayInitializer() != null)
+                    {
+                        elementType = "array"; // Массив в массиве
+                    }
+
+                    if (firstElement)
+                    {
+                        arrayType = elementType;
+                        firstElement = false;
+                    }
+                    else if (elementType != arrayType)
+                    {
+                        // Проверяем совместимость типов элементов массива
+                        if (!AreTypesCompatible(elementType, arrayType))
+                        {
+                            ReportError($"Incompatible types in array initializer: {arrayType} and {elementType}", initializer);
+                        }
+                    }
+                }
+            }
+
+            return base.VisitArrayInitializer(context);
+        }
+
+        // Анализ тела класса
+        public override object VisitClassBody(JavaGrammarParser.ClassBodyContext context)
+        {
+            // Обработка всех объявлений в теле класса
+            foreach (var declaration in context.classBodyDeclaration())
+            {
+                Visit(declaration);
+            }
+
+            // Проверка, есть ли конструктор по умолчанию, если нет других конструкторов
+            if (_symbolTable.GetCurrentScope() != "global")
+            {
+                string className = _symbolTable.GetCurrentScope();
+                var constructors = GetClassConstructors(className);
+
+                if (constructors.Count == 0)
+                {
+                    // Добавляем неявный конструктор по умолчанию
+                    _symbolTable.Declare($"{className}_default_constructor", "constructor", isStatic: false);
+                }
+            }
+
+            return base.VisitClassBody(context);
+        }
+
+        // Анализ объявления члена класса
+        public override object VisitMemberClassBodyDeclaration(JavaGrammarParser.MemberClassBodyDeclarationContext context)
+        {
+            // Собираем модификаторы
+            List<string> modifiers = new List<string>();
+            bool isStatic = false;
+            bool isFinal = false;
+
+            foreach (var modifier in context.modifier())
+            {
+                string modText = modifier.GetText();
+                modifiers.Add(modText);
+
+                if (modText == "static") isStatic = true;
+                if (modText == "final") isFinal = true;
+            }
+
+            // Обрабатываем объявление члена
+            var memberDecl = context.memberDecl();
+            if (memberDecl != null)
+            {
+                if (memberDecl is JavaGrammarParser.FieldOrMethodMemberContext fieldOrMethod)
+                {
+                    var methodOrFieldDecl = fieldOrMethod.methodOrFieldDecl();
+                    if (methodOrFieldDecl != null)
+                    {
+                        string memberName = methodOrFieldDecl.identifier().GetText();
+                        string memberType = GetTypeName(methodOrFieldDecl.type());
+
+                        // Проверяем дублирование имен в области видимости класса
+                        if (_symbolTable.IsDeclaredInCurrentScope(memberName))
+                        {
+                            ReportError($"Duplicate member name '{memberName}' in class", context);
+                        }
+                        else
+                        {
+                            // Добавляем в таблицу символов
+                            _symbolTable.Declare(memberName, memberType, isFinal, isStatic);
+                        }
+                    }
+                }
+                else if (memberDecl is JavaGrammarParser.VoidMethodMemberContext voidMethod)
+                {
+                    string methodName = voidMethod.identifier().GetText();
+
+                    // Проверяем дублирование имен методов
+                    if (_symbolTable.IsDeclaredInCurrentScope(methodName))
+                    {
+                        // Проверяем перегрузку - методы с одинаковыми именами, но разными параметрами разрешены
+                        if (!IsMethodOverloaded(methodName, voidMethod.voidMethodDeclaratorRest().formalParameters()))
+                        {
+                            ReportError($"Duplicate method name '{methodName}' in class", context);
+                        }
+                    }
+                    else
+                    {
+                        _symbolTable.Declare(methodName, "void", isFinal, isStatic);
+                    }
+                }
+            }
+
+            return base.VisitMemberClassBodyDeclaration(context);
+        }
+
+        // Вспомогательные методы
+
+        private string GetMethodReturnType(string methodName)
+        {
+            var symbol = _symbolTable.GetSymbol(methodName);
+            return symbol?.Type ?? "unknown";
+        }
+
+        private bool IsVoidEquivalentType(string type)
+        {
+            return type == "void" || type == "Void" || type == "java.lang.Void";
+        }
+
+        private List<string> GetClassConstructors(string className)
+        {
+            // В реальной реализации здесь должна быть логика поиска конструкторов
+            return new List<string>();
+        }
+
+        private bool IsMethodOverloaded(string methodName, JavaGrammarParser.FormalParametersContext parameters)
+        {
+            // В реальной реализации здесь должна быть проверка сигнатур методов
+            return true; // Упрощенная реализация
+        }
+
+    }
+}

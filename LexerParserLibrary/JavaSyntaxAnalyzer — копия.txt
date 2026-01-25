@@ -252,6 +252,349 @@ namespace LexerParserLibrary
             }
         }
 
+        public override void ExitNewCreatorPrimary([NotNull] JavaGrammarParser.NewCreatorPrimaryContext context)
+        {
+            _indentLevel--;
+        }
+
+        public override void EnterCreator([NotNull] JavaGrammarParser.CreatorContext context)
+        {
+            WriteLine("CREATOR CONTEXT");
+            _indentLevel++;
+        }
+
+        public override void ExitCreator([NotNull] JavaGrammarParser.CreatorContext context)
+        {
+            _indentLevel--;
+        }
+
+        public override void EnterCreatedName([NotNull] JavaGrammarParser.CreatedNameContext context)
+        {
+            var identifiers = context.identifier();
+            if (identifiers != null && identifiers.Length > 0)
+            {
+                // Собираем полное имя класса из всех идентификаторов
+                string fullName = string.Join(".", identifiers.Select(id => id.GetText()));
+                WriteLine($"CREATING INSTANCE OF: {fullName}");
+            }
+        }
+
+        public override void ExitCreatedName([NotNull] JavaGrammarParser.CreatedNameContext context)
+        {
+        }
+
+        public override void EnterClassCreatorRest([NotNull] JavaGrammarParser.ClassCreatorRestContext context)
+        {
+            WriteLine("CLASS CREATOR REST (arguments and optional class body)");
+            _indentLevel++;
+
+            // Обработка аргументов конструктора
+            if (context.arguments() != null)
+            {
+                WriteLine("CONSTRUCTOR ARGUMENTS:");
+                _indentLevel++;
+            }
+        }
+
+        public override void ExitClassCreatorRest([NotNull] JavaGrammarParser.ClassCreatorRestContext context)
+        {
+            if (context.arguments() != null)
+            {
+                _indentLevel--;
+            }
+            _indentLevel--;
+        }
+
+        public override void EnterArrayCreatorRest([NotNull] JavaGrammarParser.ArrayCreatorRestContext context)
+        {
+            WriteLine("ARRAY CREATOR");
+            _indentLevel++;
+        }
+
+        public override void ExitArrayCreatorRest([NotNull] JavaGrammarParser.ArrayCreatorRestContext context)
+        {
+            _indentLevel--;
+        }
+
+        // Добавление методов для обработки дженериков
+        public override void EnterTypeArgumentsOrDiamond([NotNull] JavaGrammarParser.TypeArgumentsOrDiamondContext context)
+        {
+            if (context.LT() != null && context.GT() != null && context.typeArguments() == null)
+            {
+                WriteLine("GENERIC TYPE WITH DIAMOND OPERATOR: <>");
+            }
+            else if (context.typeArguments() != null)
+            {
+                WriteLine("GENERIC TYPE ARGUMENTS");
+                _indentLevel++;
+            }
+        }
+
+        public override void ExitTypeArgumentsOrDiamond([NotNull] JavaGrammarParser.TypeArgumentsOrDiamondContext context)
+        {
+            if (context.typeArguments() != null)
+            {
+                _indentLevel--;
+            }
+        }
+
+        // Добавление методов для обработки приведения типов
+        public override void EnterCastExpression([NotNull] JavaGrammarParser.CastExpressionContext context)
+        {
+            if (context.type() != null)
+            {
+                string castType = context.type().GetText();
+                WriteLine($"CAST EXPRESSION: ({castType})");
+                _indentLevel++;
+            }
+        }
+
+        public override void ExitCastExpression([NotNull] JavaGrammarParser.CastExpressionContext context)
+        {
+            if (context.type() != null)
+            {
+                _indentLevel--;
+            }
+        }
+
+        // Добавление методов для обработки префиксных операторов
+        public override void EnterPrefixExpression([NotNull] JavaGrammarParser.PrefixExpressionContext context)
+        {
+            if (context.prefixOp() != null)
+            {
+                string operatorText = context.prefixOp().GetText();
+                WriteLine($"PREFIX OPERATION: {operatorText}");
+                _indentLevel++;
+            }
+        }
+
+        public override void ExitPrefixExpression([NotNull] JavaGrammarParser.PrefixExpressionContext context)
+        {
+            if (context.prefixOp() != null)
+            {
+                _indentLevel--;
+            }
+        }
+
+        // Добавление методов для обработки инициализаторов массивов
+        public override void EnterArrayInitializer([NotNull] JavaGrammarParser.ArrayInitializerContext context)
+        {
+            WriteLine("ARRAY INITIALIZER: {");
+            _indentLevel++;
+        }
+
+        public override void ExitArrayInitializer([NotNull] JavaGrammarParser.ArrayInitializerContext context)
+        {
+            _indentLevel--;
+            WriteLine("}");
+        }
+
+        // Добавление методов для обработки switch более детально
+        public override void EnterSwitchBlockStatementGroups([NotNull] JavaGrammarParser.SwitchBlockStatementGroupsContext context)
+        {
+            WriteLine("SWITCH BLOCK STATEMENT GROUPS");
+            _indentLevel++;
+        }
+
+        public override void ExitSwitchBlockStatementGroups([NotNull] JavaGrammarParser.SwitchBlockStatementGroupsContext context)
+        {
+            _indentLevel--;
+        }
+
+        public override void EnterSwitchBlockStatementGroup([NotNull] JavaGrammarParser.SwitchBlockStatementGroupContext context)
+        {
+            WriteLine("SWITCH BLOCK STATEMENT GROUP");
+            _indentLevel++;
+        }
+
+        public override void ExitSwitchBlockStatementGroup([NotNull] JavaGrammarParser.SwitchBlockStatementGroupContext context)
+        {
+            _indentLevel--;
+        }
+
+        public override void EnterSwitchLabels([NotNull] JavaGrammarParser.SwitchLabelsContext context)
+        {
+            WriteLine("SWITCH LABELS");
+            _indentLevel++;
+        }
+
+        public override void ExitSwitchLabels([NotNull] JavaGrammarParser.SwitchLabelsContext context)
+        {
+            _indentLevel--;
+        }
+
+        public override void EnterEnumConstantName([NotNull] JavaGrammarParser.EnumConstantNameContext context)
+        {
+            if (context.identifier() != null)
+            {
+                string enumName = context.identifier().GetText();
+                WriteLine($"ENUM CONSTANT: {enumName}");
+            }
+        }
+
+        // Добавление методов для обработки циклов for более детально
+        public override void EnterForVarControl([NotNull] JavaGrammarParser.ForVarControlContext context)
+        {
+            WriteLine("FOR VARIABLE CONTROL");
+            _indentLevel++;
+
+            if (context.type() != null && context.variableDeclaratorId() != null)
+            {
+                string varType = context.type().GetText();
+                string varName = context.variableDeclaratorId().GetText();
+                WriteLine($"LOOP VARIABLE: {varType} {varName}");
+            }
+        }
+
+        public override void ExitForVarControl([NotNull] JavaGrammarParser.ForVarControlContext context)
+        {
+            _indentLevel--;
+        }
+
+        public override void EnterForVarControlRest([NotNull] JavaGrammarParser.ForVarControlRestContext context)
+        {
+            if (context.COLON() != null)
+            {
+                WriteLine("ENHANCED FOR LOOP (for-each)");
+            }
+            else
+            {
+                WriteLine("TRADITIONAL FOR LOOP");
+            }
+        }
+
+        public override void EnterArraySelector([NotNull] JavaGrammarParser.ArraySelectorContext context)
+        {
+            WriteLine("ARRAY ACCESS");
+            _indentLevel++;
+        }
+
+        public override void ExitArraySelector([NotNull] JavaGrammarParser.ArraySelectorContext context)
+        {
+            _indentLevel--;
+        }
+
+        // Добавление методов для обработки суффиксов идентификаторов
+        public override void EnterClassLiteralSuffix([NotNull] JavaGrammarParser.ClassLiteralSuffixContext context)
+        {
+            WriteLine("CLASS LITERAL (e.g., int[].class)");
+        }
+
+        public override void EnterArrayAccessSuffix([NotNull] JavaGrammarParser.ArrayAccessSuffixContext context)
+        {
+            WriteLine("ARRAY ACCESS SUFFIX");
+            _indentLevel++;
+        }
+
+        public override void ExitArrayAccessSuffix([NotNull] JavaGrammarParser.ArrayAccessSuffixContext context)
+        {
+            _indentLevel--;
+        }
+
+        public override void EnterArgumentsSuffix([NotNull] JavaGrammarParser.ArgumentsSuffixContext context)
+        {
+            WriteLine("METHOD ARGUMENTS SUFFIX");
+            _indentLevel++;
+        }
+
+        public override void ExitArgumentsSuffix([NotNull] JavaGrammarParser.ArgumentsSuffixContext context)
+        {
+            _indentLevel--;
+        }
+
+        // Добавление методов для обработки выражений в скобках
+        public override void EnterParExpression([NotNull] JavaGrammarParser.ParExpressionContext context)
+        {
+            WriteLine("PARENTHESIZED EXPRESSION");
+            _indentLevel++;
+        }
+
+        public override void ExitParExpression([NotNull] JavaGrammarParser.ParExpressionContext context)
+        {
+            _indentLevel--;
+        }
+
+        // Добавление методов для обработки литералов и примитивных типов
+        public override void EnterBasicType([NotNull] JavaGrammarParser.BasicTypeContext context)
+        {
+            string typeName = context.GetText().ToLower();
+            WriteLine($"BASIC TYPE: {typeName}");
+        }
+
+        public override void EnterReferenceType([NotNull] JavaGrammarParser.ReferenceTypeContext context)
+        {
+            var identifiers = context.identifier();
+            if (identifiers != null && identifiers.Length > 0)
+            {
+                // Собираем полное имя типа из всех идентификаторов (например, "java.util.List")
+                string fullName = string.Join(".", identifiers.Select(id => id.GetText()));
+                WriteLine($"REFERENCE TYPE: {fullName}");
+
+                if (context.typeArguments() != null)
+                {
+                    WriteLine("WITH GENERIC ARGUMENTS");
+                    _indentLevel++;
+                }
+            }
+        }
+
+        public override void ExitReferenceType([NotNull] JavaGrammarParser.ReferenceTypeContext context)
+        {
+            if (context.typeArguments() != null)
+            {
+                _indentLevel--;
+            }
+        }
+
+        // Добавление методов для обработки префиксных и постфиксных операторов
+        public override void EnterPrefixOp([NotNull] JavaGrammarParser.PrefixOpContext context)
+        {
+            string op = context.GetText();
+            WriteLine($"PREFIX OPERATOR: {op}");
+        }
+
+        public override void EnterPostfixOp([NotNull] JavaGrammarParser.PostfixOpContext context)
+        {
+            string op = context.GetText();
+            WriteLine($"POSTFIX OPERATOR: {op}");
+        }
+
+        // Добавление методов для обработки инфиксных операторов
+        public override void EnterInfixOp([NotNull] JavaGrammarParser.InfixOpContext context)
+        {
+            string op = context.GetText();
+            WriteLine($"INFIX OPERATOR: {op}");
+        }
+
+        // Добавление методов для обработки анонимных классов
+        public override void EnterClassBody([NotNull] JavaGrammarParser.ClassBodyContext context)
+        {
+            // Проверяем, не является ли это анонимным классом
+            var parent = context.Parent;
+            while (parent != null)
+            {
+                if (parent is JavaGrammarParser.ClassCreatorRestContext)
+                {
+                    WriteLine("ANONYMOUS CLASS BODY");
+                    break;
+                }
+                parent = parent.Parent;
+            }
+
+            if (parent == null)
+            {
+                WriteLine("CLASS BODY");
+            }
+
+            _indentLevel++;
+        }
+
+        public override void ExitClassBody([NotNull] JavaGrammarParser.ClassBodyContext context)
+        {
+            _indentLevel--;
+            WriteLine("END CLASS BODY");
+        }
+
         // Анализ статических блоков
         public override void EnterStaticBlockClassBodyDeclaration([NotNull] JavaGrammarParser.StaticBlockClassBodyDeclarationContext context)
         {

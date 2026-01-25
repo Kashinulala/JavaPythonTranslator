@@ -1,38 +1,39 @@
-﻿using Antlr4.Runtime.Tree;
-using Antlr4.Runtime;
+﻿using Antlr4.Runtime;
+using Antlr4.Runtime.Tree;
 using LexerParserLibrary;
 
-string input = File.ReadAllText("../../../JavaCode.java");
-try
+string javaCode = File.ReadAllText("../../../JavaCode.java");
+
+// 1. Создаем лексер и парсер
+ICharStream stream = CharStreams.fromString(javaCode);
+JavaGrammarLexer lexer = new JavaGrammarLexer(stream);
+ITokenStream tokens = new CommonTokenStream(lexer);
+JavaGrammarParser parser = new JavaGrammarParser(tokens);
+
+// 2. Строим дерево разбора
+IParseTree tree = parser.compilationUnit();
+
+// 3. Проверяем, что синтаксический анализ прошел успешно
+if (parser.NumberOfSyntaxErrors > 0)
 {
-    // Создаем лексер и парсер
-    ICharStream stream = CharStreams.fromString(input);
-    JavaGrammarLexer lexer = new JavaGrammarLexer(stream);
-    ITokenStream tokens = new CommonTokenStream(lexer);
-    JavaGrammarParser parser = new JavaGrammarParser(tokens);
+    Console.WriteLine("Syntax errors found. Aborting semantic analysis.");
+    return;
+}
 
-    // Создаем слушатель и обходим дерево
-    JavaSyntaxAnalyzer analyzer = new JavaSyntaxAnalyzer();
-    ParseTreeWalker walker = new ParseTreeWalker();
-    walker.Walk(analyzer, parser.compilationUnit());
+// 4. Запускаем семантический анализ
+SemanticAnalyzer analyzer = new SemanticAnalyzer();
+analyzer.Visit(tree);
 
-    // Генерируем отчет
-    analyzer.GenerateReport();
-
-    // Выводим результаты
-    Console.WriteLine(analyzer.GetAnalysisResult());
-
-    if (analyzer.HasErrors)
+// 5. Выводим результаты
+if (analyzer.HasErrors)
+{
+    Console.WriteLine("SEMANTIC ERRORS FOUND:");
+    foreach (var error in analyzer.Errors)
     {
-        Console.WriteLine("\nSYNTAX ERRORS FOUND:");
-        Console.WriteLine(analyzer.GetErrors());
-    }
-    else
-    {
-        Console.WriteLine("\nSYNTAX ANALYSIS COMPLETED SUCCESSFULLY. NO ERRORS FOUND.");
+        Console.WriteLine($"Line {error.Line}, Column {error.Column}: {error.Message}");
     }
 }
-catch (Exception ex)
+else
 {
-    Console.WriteLine($"ERROR DURING ANALYSIS: {ex.Message}");
+    Console.WriteLine("SEMANTIC ANALYSIS COMPLETED SUCCESSFULLY. NO ERRORS FOUND.");
 }
