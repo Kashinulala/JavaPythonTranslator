@@ -27,110 +27,104 @@ using Antlr4.Runtime.Atn;
 using Antlr4.Runtime.Misc;
 using DFA = Antlr4.Runtime.Dfa.DFA;
 
-namespace LexerParserLibrary
-{
-
-	[System.CodeDom.Compiler.GeneratedCode("ANTLR", "4.13.2")]
-	[System.CLSCompliant(false)]
-	public partial class JavaGrammarLexer : Lexer
-	{
-		protected static DFA[] decisionToDFA;
-		protected static PredictionContextCache sharedContextCache = new PredictionContextCache();
-		public const int
-			T__0 = 1, T__1 = 2, T__2 = 3, T__3 = 4, T__4 = 5, T__5 = 6, T__6 = 7, T__7 = 8, T__8 = 9,
-			T__9 = 10, T__10 = 11, T__11 = 12, T__12 = 13, T__13 = 14, T__14 = 15, T__15 = 16, T__16 = 17,
-			T__17 = 18, T__18 = 19, T__19 = 20, T__20 = 21, T__21 = 22, NEW = 23, CLASS = 24, VOID = 25,
-			STATIC = 26, IF = 27, ELSE = 28, WHILE = 29, DO = 30, FOR = 31, SWITCH = 32, BREAK = 33,
-			CONTINUE = 34, RETURN = 35, NULL = 36, TRUE = 37, FALSE = 38, FINAL = 39, LPAREN = 40,
-			RPAREN = 41, LCURLY = 42, RCURLY = 43, LBRACK = 44, RBRACK = 45, SEMI = 46, COMMA = 47,
-			DOT = 48, ASSIGN = 49, PLUS = 50, MINUS = 51, MULT = 52, DIV = 53, MOD = 54, BANG = 55,
-			INC = 56, DEC = 57, LT = 58, GT = 59, LTEQ = 60, GTEQ = 61, EQEQ = 62, NOTEQUAL = 63,
-			COLON = 64, ELLIPSIS = 65, INTEGER_LITERAL = 66, FLOATING_POINT_LITERAL = 67,
-			CHARACTER_LITERAL = 68, STRING_LITERAL = 69, IDENTIFIER = 70, WS = 71, COMMENT = 72,
-			LINE_COMMENT = 73;
-		public static string[] channelNames = {
+[System.CodeDom.Compiler.GeneratedCode("ANTLR", "4.13.2")]
+[System.CLSCompliant(false)]
+public partial class JavaGrammarLexer : Lexer {
+	protected static DFA[] decisionToDFA;
+	protected static PredictionContextCache sharedContextCache = new PredictionContextCache();
+	public const int
+		T__0=1, T__1=2, T__2=3, T__3=4, T__4=5, T__5=6, T__6=7, T__7=8, T__8=9, 
+		T__9=10, T__10=11, T__11=12, T__12=13, T__13=14, T__14=15, T__15=16, T__16=17, 
+		T__17=18, T__18=19, T__19=20, T__20=21, T__21=22, NEW=23, CLASS=24, VOID=25, 
+		STATIC=26, IF=27, ELSE=28, WHILE=29, DO=30, FOR=31, SWITCH=32, BREAK=33, 
+		CONTINUE=34, RETURN=35, NULL=36, TRUE=37, FALSE=38, FINAL=39, LPAREN=40, 
+		RPAREN=41, LCURLY=42, RCURLY=43, LBRACK=44, RBRACK=45, SEMI=46, COMMA=47, 
+		DOT=48, ASSIGN=49, PLUS=50, MINUS=51, MULT=52, DIV=53, MOD=54, BANG=55, 
+		INC=56, DEC=57, LT=58, GT=59, LTEQ=60, GTEQ=61, EQEQ=62, NOTEQUAL=63, 
+		COLON=64, ELLIPSIS=65, INTEGER_LITERAL=66, FLOATING_POINT_LITERAL=67, 
+		CHARACTER_LITERAL=68, STRING_LITERAL=69, IDENTIFIER=70, WS=71, COMMENT=72, 
+		LINE_COMMENT=73;
+	public static string[] channelNames = {
 		"DEFAULT_TOKEN_CHANNEL", "HIDDEN"
 	};
 
-		public static string[] modeNames = {
+	public static string[] modeNames = {
 		"DEFAULT_MODE"
 	};
 
-		public static readonly string[] ruleNames = {
-		"T__0", "T__1", "T__2", "T__3", "T__4", "T__5", "T__6", "T__7", "T__8",
-		"T__9", "T__10", "T__11", "T__12", "T__13", "T__14", "T__15", "T__16",
-		"T__17", "T__18", "T__19", "T__20", "T__21", "NEW", "CLASS", "VOID", "STATIC",
-		"IF", "ELSE", "WHILE", "DO", "FOR", "SWITCH", "BREAK", "CONTINUE", "RETURN",
-		"NULL", "TRUE", "FALSE", "FINAL", "LPAREN", "RPAREN", "LCURLY", "RCURLY",
-		"LBRACK", "RBRACK", "SEMI", "COMMA", "DOT", "ASSIGN", "PLUS", "MINUS",
-		"MULT", "DIV", "MOD", "BANG", "INC", "DEC", "LT", "GT", "LTEQ", "GTEQ",
-		"EQEQ", "NOTEQUAL", "COLON", "ELLIPSIS", "INTEGER_LITERAL", "FLOATING_POINT_LITERAL",
-		"CHARACTER_LITERAL", "STRING_LITERAL", "IDENTIFIER", "WS", "COMMENT",
+	public static readonly string[] ruleNames = {
+		"T__0", "T__1", "T__2", "T__3", "T__4", "T__5", "T__6", "T__7", "T__8", 
+		"T__9", "T__10", "T__11", "T__12", "T__13", "T__14", "T__15", "T__16", 
+		"T__17", "T__18", "T__19", "T__20", "T__21", "NEW", "CLASS", "VOID", "STATIC", 
+		"IF", "ELSE", "WHILE", "DO", "FOR", "SWITCH", "BREAK", "CONTINUE", "RETURN", 
+		"NULL", "TRUE", "FALSE", "FINAL", "LPAREN", "RPAREN", "LCURLY", "RCURLY", 
+		"LBRACK", "RBRACK", "SEMI", "COMMA", "DOT", "ASSIGN", "PLUS", "MINUS", 
+		"MULT", "DIV", "MOD", "BANG", "INC", "DEC", "LT", "GT", "LTEQ", "GTEQ", 
+		"EQEQ", "NOTEQUAL", "COLON", "ELLIPSIS", "INTEGER_LITERAL", "FLOATING_POINT_LITERAL", 
+		"CHARACTER_LITERAL", "STRING_LITERAL", "IDENTIFIER", "WS", "COMMENT", 
 		"LINE_COMMENT"
 	};
 
 
-		public JavaGrammarLexer(ICharStream input)
-		: this(input, Console.Out, Console.Error) { }
+	public JavaGrammarLexer(ICharStream input)
+	: this(input, Console.Out, Console.Error) { }
 
-		public JavaGrammarLexer(ICharStream input, TextWriter output, TextWriter errorOutput)
-		: base(input, output, errorOutput)
-		{
-			Interpreter = new LexerATNSimulator(this, _ATN, decisionToDFA, sharedContextCache);
-		}
+	public JavaGrammarLexer(ICharStream input, TextWriter output, TextWriter errorOutput)
+	: base(input, output, errorOutput)
+	{
+		Interpreter = new LexerATNSimulator(this, _ATN, decisionToDFA, sharedContextCache);
+	}
 
-		private static readonly string[] _LiteralNames = {
-		null, "'import'", "'case'", "'default'", "'||'", "'&&'", "'byte'", "'short'",
-		"'char'", "'int'", "'long'", "'float'", "'double'", "'boolean'", "'public'",
-		"'protected'", "'private'", "'abstract'", "'native'", "'synchronized'",
-		"'transient'", "'volatile'", "'strictfp'", "'new'", "'class'", "'void'",
-		"'static'", "'if'", "'else'", "'while'", "'do'", "'for'", "'switch'",
-		"'break'", "'continue'", "'return'", "'null'", "'true'", "'false'", "'final'",
-		"'('", "')'", "'{'", "'}'", "'['", "']'", "';'", "','", "'.'", "'='",
-		"'+'", "'-'", "'*'", "'/'", "'%'", "'!'", "'++'", "'--'", "'<'", "'>'",
+	private static readonly string[] _LiteralNames = {
+		null, "'import'", "'case'", "'default'", "'||'", "'&&'", "'byte'", "'short'", 
+		"'char'", "'int'", "'long'", "'float'", "'double'", "'boolean'", "'public'", 
+		"'protected'", "'private'", "'abstract'", "'native'", "'synchronized'", 
+		"'transient'", "'volatile'", "'strictfp'", "'new'", "'class'", "'void'", 
+		"'static'", "'if'", "'else'", "'while'", "'do'", "'for'", "'switch'", 
+		"'break'", "'continue'", "'return'", "'null'", "'true'", "'false'", "'final'", 
+		"'('", "')'", "'{'", "'}'", "'['", "']'", "';'", "','", "'.'", "'='", 
+		"'+'", "'-'", "'*'", "'/'", "'%'", "'!'", "'++'", "'--'", "'<'", "'>'", 
 		"'<='", "'>='", "'=='", "'!='", "':'", "'...'"
 	};
-		private static readonly string[] _SymbolicNames = {
-		null, null, null, null, null, null, null, null, null, null, null, null,
-		null, null, null, null, null, null, null, null, null, null, null, "NEW",
-		"CLASS", "VOID", "STATIC", "IF", "ELSE", "WHILE", "DO", "FOR", "SWITCH",
-		"BREAK", "CONTINUE", "RETURN", "NULL", "TRUE", "FALSE", "FINAL", "LPAREN",
-		"RPAREN", "LCURLY", "RCURLY", "LBRACK", "RBRACK", "SEMI", "COMMA", "DOT",
-		"ASSIGN", "PLUS", "MINUS", "MULT", "DIV", "MOD", "BANG", "INC", "DEC",
-		"LT", "GT", "LTEQ", "GTEQ", "EQEQ", "NOTEQUAL", "COLON", "ELLIPSIS", "INTEGER_LITERAL",
-		"FLOATING_POINT_LITERAL", "CHARACTER_LITERAL", "STRING_LITERAL", "IDENTIFIER",
+	private static readonly string[] _SymbolicNames = {
+		null, null, null, null, null, null, null, null, null, null, null, null, 
+		null, null, null, null, null, null, null, null, null, null, null, "NEW", 
+		"CLASS", "VOID", "STATIC", "IF", "ELSE", "WHILE", "DO", "FOR", "SWITCH", 
+		"BREAK", "CONTINUE", "RETURN", "NULL", "TRUE", "FALSE", "FINAL", "LPAREN", 
+		"RPAREN", "LCURLY", "RCURLY", "LBRACK", "RBRACK", "SEMI", "COMMA", "DOT", 
+		"ASSIGN", "PLUS", "MINUS", "MULT", "DIV", "MOD", "BANG", "INC", "DEC", 
+		"LT", "GT", "LTEQ", "GTEQ", "EQEQ", "NOTEQUAL", "COLON", "ELLIPSIS", "INTEGER_LITERAL", 
+		"FLOATING_POINT_LITERAL", "CHARACTER_LITERAL", "STRING_LITERAL", "IDENTIFIER", 
 		"WS", "COMMENT", "LINE_COMMENT"
 	};
-		public static readonly IVocabulary DefaultVocabulary = new Vocabulary(_LiteralNames, _SymbolicNames);
+	public static readonly IVocabulary DefaultVocabulary = new Vocabulary(_LiteralNames, _SymbolicNames);
 
-		[NotNull]
-		public override IVocabulary Vocabulary
+	[NotNull]
+	public override IVocabulary Vocabulary
+	{
+		get
 		{
-			get
-			{
-				return DefaultVocabulary;
-			}
+			return DefaultVocabulary;
 		}
+	}
 
-		public override string GrammarFileName { get { return "JavaGrammar.g4"; } }
+	public override string GrammarFileName { get { return "JavaGrammar.g4"; } }
 
-		public override string[] RuleNames { get { return ruleNames; } }
+	public override string[] RuleNames { get { return ruleNames; } }
 
-		public override string[] ChannelNames { get { return channelNames; } }
+	public override string[] ChannelNames { get { return channelNames; } }
 
-		public override string[] ModeNames { get { return modeNames; } }
+	public override string[] ModeNames { get { return modeNames; } }
 
-		public override int[] SerializedAtn { get { return _serializedATN; } }
+	public override int[] SerializedAtn { get { return _serializedATN; } }
 
-		static JavaGrammarLexer()
-		{
-			decisionToDFA = new DFA[_ATN.NumberOfDecisions];
-			for (int i = 0; i < _ATN.NumberOfDecisions; i++)
-			{
-				decisionToDFA[i] = new DFA(_ATN.GetDecisionState(i), i);
-			}
+	static JavaGrammarLexer() {
+		decisionToDFA = new DFA[_ATN.NumberOfDecisions];
+		for (int i = 0; i < _ATN.NumberOfDecisions; i++) {
+			decisionToDFA[i] = new DFA(_ATN.GetDecisionState(i), i);
 		}
-		private static int[] _serializedATN = {
+	}
+	private static int[] _serializedATN = {
 		4,0,73,541,6,-1,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,2,5,7,5,2,6,7,
 		6,2,7,7,7,2,8,7,8,2,9,7,9,2,10,7,10,2,11,7,11,2,12,7,12,2,13,7,13,2,14,
 		7,14,2,15,7,15,2,16,7,16,2,17,7,17,2,18,7,18,2,19,7,19,2,20,7,20,2,21,
@@ -310,9 +304,8 @@ namespace LexerParserLibrary
 		14,0,458,463,470,474,479,481,487,495,497,506,512,522,536,1,6,0,0
 	};
 
-		public static readonly ATN _ATN =
-			new ATNDeserializer().Deserialize(_serializedATN);
+	public static readonly ATN _ATN =
+		new ATNDeserializer().Deserialize(_serializedATN);
 
 
-	}
 }

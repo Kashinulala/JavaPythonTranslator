@@ -539,7 +539,6 @@ namespace LexerParserLibrary.SemanticAnalyzer
             // Проверяем модификаторы класса
             bool hasPublicModifier = false;
 
-            // В сгенерированном парсере модификаторы находятся через метод modifier()
             foreach (var modifierContext in context.modifier())
             {
                 string modifierText = modifierContext.GetText();
@@ -561,24 +560,29 @@ namespace LexerParserLibrary.SemanticAnalyzer
             {
                 foreach (var declaration in classBody.classBodyDeclaration())
                 {
-                    // Проверяем объявления членов класса
-                    if (declaration.memberDecl() != null)
+                    // Проверяем, является ли объявление MemberClassBodyDeclarationContext
+                    if (declaration is JavaGrammarParser.MemberClassBodyDeclarationContext memberDeclContext)
                     {
-                        // Проверяем void-методы
-                        if (declaration.memberDecl() is JavaGrammarParser.VoidMethodMemberContext voidMethod)
+                        // Теперь можно безопасно вызвать memberDecl()
+                        var memberDecl = memberDeclContext.memberDecl();
+                        if (memberDecl != null)
                         {
-                            if (voidMethod.identifier().GetText() == "main")
+                            // Проверяем void-методы
+                            if (memberDecl is JavaGrammarParser.VoidMethodMemberContext voidMethod)
                             {
-                                hasMainMethod = true;
+                                if (voidMethod.identifier().GetText() == "main")
+                                {
+                                    hasMainMethod = true;
+                                }
                             }
-                        }
-                        // Проверяем методы с возвращаемым типом
-                        else if (declaration.memberDecl() is JavaGrammarParser.FieldOrMethodMemberContext fieldOrMethod)
-                        {
-                            if (fieldOrMethod.methodOrFieldDecl() != null &&
-                                fieldOrMethod.methodOrFieldDecl().identifier().GetText() == "main")
+                            // Проверяем методы с возвращаемым типом
+                            else if (memberDecl is JavaGrammarParser.FieldOrMethodMemberContext fieldOrMethod)
                             {
-                                hasMainMethod = true;
+                                if (fieldOrMethod.methodOrFieldDecl() != null &&
+                                    fieldOrMethod.methodOrFieldDecl().identifier().GetText() == "main")
+                                {
+                                    hasMainMethod = true;
+                                }
                             }
                         }
                     }

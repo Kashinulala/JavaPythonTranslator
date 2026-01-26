@@ -23,643 +23,639 @@ using Antlr4.Runtime.Misc;
 using Antlr4.Runtime.Tree;
 using IToken = Antlr4.Runtime.IToken;
 
-namespace LexerParserLibrary
-{
+/// <summary>
+/// This interface defines a complete generic visitor for a parse tree produced
+/// by <see cref="JavaGrammarParser"/>.
+/// </summary>
+/// <typeparam name="Result">The return type of the visit operation.</typeparam>
+[System.CodeDom.Compiler.GeneratedCode("ANTLR", "4.13.2")]
+[System.CLSCompliant(false)]
+public interface IJavaGrammarVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <summary>
-	/// This interface defines a complete generic visitor for a parse tree produced
-	/// by <see cref="JavaGrammarParser"/>.
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.identifier"/>.
 	/// </summary>
-	/// <typeparam name="Result">The return type of the visit operation.</typeparam>
-	[System.CodeDom.Compiler.GeneratedCode("ANTLR", "4.13.2")]
-	[System.CLSCompliant(false)]
-	public interface IJavaGrammarVisitor<Result> : IParseTreeVisitor<Result>
-	{
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.identifier"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitIdentifier([NotNull] JavaGrammarParser.IdentifierContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.literal"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitLiteral([NotNull] JavaGrammarParser.LiteralContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.compilationUnit"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitCompilationUnit([NotNull] JavaGrammarParser.CompilationUnitContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.typeDeclaration"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitTypeDeclaration([NotNull] JavaGrammarParser.TypeDeclarationContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.importDeclaration"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitImportDeclaration([NotNull] JavaGrammarParser.ImportDeclarationContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.qualifiedIdentifier"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitQualifiedIdentifier([NotNull] JavaGrammarParser.QualifiedIdentifierContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.classDeclaration"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitClassDeclaration([NotNull] JavaGrammarParser.ClassDeclarationContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.classBody"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitClassBody([NotNull] JavaGrammarParser.ClassBodyContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>EmptyClassBodyDeclaration</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.classBodyDeclaration"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitEmptyClassBodyDeclaration([NotNull] JavaGrammarParser.EmptyClassBodyDeclarationContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>MemberClassBodyDeclaration</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.classBodyDeclaration"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitMemberClassBodyDeclaration([NotNull] JavaGrammarParser.MemberClassBodyDeclarationContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>StaticBlockClassBodyDeclaration</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.classBodyDeclaration"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitStaticBlockClassBodyDeclaration([NotNull] JavaGrammarParser.StaticBlockClassBodyDeclarationContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>FieldOrMethodMember</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.memberDecl"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitFieldOrMethodMember([NotNull] JavaGrammarParser.FieldOrMethodMemberContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>VoidMethodMember</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.memberDecl"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitVoidMethodMember([NotNull] JavaGrammarParser.VoidMethodMemberContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.methodOrFieldDecl"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitMethodOrFieldDecl([NotNull] JavaGrammarParser.MethodOrFieldDeclContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>FieldRest</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.methodOrFieldRest"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitFieldRest([NotNull] JavaGrammarParser.FieldRestContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>MethodRest</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.methodOrFieldRest"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitMethodRest([NotNull] JavaGrammarParser.MethodRestContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.fieldDeclaratorsRest"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitFieldDeclaratorsRest([NotNull] JavaGrammarParser.FieldDeclaratorsRestContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.methodDeclaratorRest"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitMethodDeclaratorRest([NotNull] JavaGrammarParser.MethodDeclaratorRestContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.voidMethodDeclaratorRest"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitVoidMethodDeclaratorRest([NotNull] JavaGrammarParser.VoidMethodDeclaratorRestContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.formalParameters"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitFormalParameters([NotNull] JavaGrammarParser.FormalParametersContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.formalParameterDecls"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitFormalParameterDecls([NotNull] JavaGrammarParser.FormalParameterDeclsContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.formalParameterDeclsRest"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitFormalParameterDeclsRest([NotNull] JavaGrammarParser.FormalParameterDeclsRestContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.variableDeclaratorId"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitVariableDeclaratorId([NotNull] JavaGrammarParser.VariableDeclaratorIdContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.variableDeclarator"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitVariableDeclarator([NotNull] JavaGrammarParser.VariableDeclaratorContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.variableDeclaratorRest"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitVariableDeclaratorRest([NotNull] JavaGrammarParser.VariableDeclaratorRestContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.variableDeclarators"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitVariableDeclarators([NotNull] JavaGrammarParser.VariableDeclaratorsContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.variableInitializer"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitVariableInitializer([NotNull] JavaGrammarParser.VariableInitializerContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.arrayInitializer"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitArrayInitializer([NotNull] JavaGrammarParser.ArrayInitializerContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.variableInitializers"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitVariableInitializers([NotNull] JavaGrammarParser.VariableInitializersContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.block"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitBlock([NotNull] JavaGrammarParser.BlockContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.blockStatements"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitBlockStatements([NotNull] JavaGrammarParser.BlockStatementsContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>LocalVariableBlockStatement</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.blockStatement"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitLocalVariableBlockStatement([NotNull] JavaGrammarParser.LocalVariableBlockStatementContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>LabeledStatementBlockStatement</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.blockStatement"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitLabeledStatementBlockStatement([NotNull] JavaGrammarParser.LabeledStatementBlockStatementContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>StatementBlockStatement</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.blockStatement"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitStatementBlockStatement([NotNull] JavaGrammarParser.StatementBlockStatementContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.localVariableDeclarationStatement"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitLocalVariableDeclarationStatement([NotNull] JavaGrammarParser.LocalVariableDeclarationStatementContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>InnerBlockStatement</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.statement"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitInnerBlockStatement([NotNull] JavaGrammarParser.InnerBlockStatementContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>EmptyStatement</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.statement"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitEmptyStatement([NotNull] JavaGrammarParser.EmptyStatementContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>LabeledStatement</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.statement"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitLabeledStatement([NotNull] JavaGrammarParser.LabeledStatementContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>IfStatement</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.statement"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitIfStatement([NotNull] JavaGrammarParser.IfStatementContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>SwitchStatement</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.statement"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitSwitchStatement([NotNull] JavaGrammarParser.SwitchStatementContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>WhileStatement</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.statement"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitWhileStatement([NotNull] JavaGrammarParser.WhileStatementContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>DoWhileStatement</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.statement"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitDoWhileStatement([NotNull] JavaGrammarParser.DoWhileStatementContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>ForStatement</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.statement"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitForStatement([NotNull] JavaGrammarParser.ForStatementContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>BreakStatement</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.statement"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitBreakStatement([NotNull] JavaGrammarParser.BreakStatementContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>ContinueStatement</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.statement"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitContinueStatement([NotNull] JavaGrammarParser.ContinueStatementContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>ReturnStatement</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.statement"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitReturnStatement([NotNull] JavaGrammarParser.ReturnStatementContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>ExpressionStatement</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.statement"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitExpressionStatement([NotNull] JavaGrammarParser.ExpressionStatementContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.statementExpression"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitStatementExpression([NotNull] JavaGrammarParser.StatementExpressionContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.switchBlockStatementGroups"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitSwitchBlockStatementGroups([NotNull] JavaGrammarParser.SwitchBlockStatementGroupsContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.switchBlockStatementGroup"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitSwitchBlockStatementGroup([NotNull] JavaGrammarParser.SwitchBlockStatementGroupContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.switchLabels"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitSwitchLabels([NotNull] JavaGrammarParser.SwitchLabelsContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>CaseExprLabel</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.switchLabel"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitCaseExprLabel([NotNull] JavaGrammarParser.CaseExprLabelContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>CaseEnumLabel</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.switchLabel"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitCaseEnumLabel([NotNull] JavaGrammarParser.CaseEnumLabelContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>DefaultLabel</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.switchLabel"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitDefaultLabel([NotNull] JavaGrammarParser.DefaultLabelContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.enumConstantName"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitEnumConstantName([NotNull] JavaGrammarParser.EnumConstantNameContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>EnhancedForControl</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.forControl"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitEnhancedForControl([NotNull] JavaGrammarParser.EnhancedForControlContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>TraditionalForControl</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.forControl"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitTraditionalForControl([NotNull] JavaGrammarParser.TraditionalForControlContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.forVarControl"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitForVarControl([NotNull] JavaGrammarParser.ForVarControlContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.forVarControlRest"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitForVarControlRest([NotNull] JavaGrammarParser.ForVarControlRestContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.forVariableDeclaratorsRest"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitForVariableDeclaratorsRest([NotNull] JavaGrammarParser.ForVariableDeclaratorsRestContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.forInit"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitForInit([NotNull] JavaGrammarParser.ForInitContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.forUpdate"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitForUpdate([NotNull] JavaGrammarParser.ForUpdateContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>PrimaryExpression</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.expression"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitPrimaryExpression([NotNull] JavaGrammarParser.PrimaryExpressionContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>AssignmentExpression</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.expression"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitAssignmentExpression([NotNull] JavaGrammarParser.AssignmentExpressionContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>InfixExpression</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.expression1"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitInfixExpression([NotNull] JavaGrammarParser.InfixExpressionContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>SimpleExpression2</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.expression1"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitSimpleExpression2([NotNull] JavaGrammarParser.SimpleExpression2Context context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.infixOp"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitInfixOp([NotNull] JavaGrammarParser.InfixOpContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>PrefixExpression</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.expression2"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitPrefixExpression([NotNull] JavaGrammarParser.PrefixExpressionContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>CastExpression</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.expression2"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitCastExpression([NotNull] JavaGrammarParser.CastExpressionContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>PostfixExpression</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.expression2"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitPostfixExpression([NotNull] JavaGrammarParser.PostfixExpressionContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.prefixOp"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitPrefixOp([NotNull] JavaGrammarParser.PrefixOpContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.postfixOp"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitPostfixOp([NotNull] JavaGrammarParser.PostfixOpContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>LiteralPrimary</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.primary"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitLiteralPrimary([NotNull] JavaGrammarParser.LiteralPrimaryContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>ParenthesizedPrimary</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.primary"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitParenthesizedPrimary([NotNull] JavaGrammarParser.ParenthesizedPrimaryContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>IdentifierPrimary</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.primary"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitIdentifierPrimary([NotNull] JavaGrammarParser.IdentifierPrimaryContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>NewCreatorPrimary</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.primary"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitNewCreatorPrimary([NotNull] JavaGrammarParser.NewCreatorPrimaryContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.parExpression"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitParExpression([NotNull] JavaGrammarParser.ParExpressionContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>ClassLiteralSuffix</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.identifierSuffix"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitClassLiteralSuffix([NotNull] JavaGrammarParser.ClassLiteralSuffixContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>ArrayAccessSuffix</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.identifierSuffix"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitArrayAccessSuffix([NotNull] JavaGrammarParser.ArrayAccessSuffixContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>ArgumentsSuffix</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.identifierSuffix"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitArgumentsSuffix([NotNull] JavaGrammarParser.ArgumentsSuffixContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.arguments"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitArguments([NotNull] JavaGrammarParser.ArgumentsContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.expressionList"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitExpressionList([NotNull] JavaGrammarParser.ExpressionListContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>MethodOrFieldSelector</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.selector"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitMethodOrFieldSelector([NotNull] JavaGrammarParser.MethodOrFieldSelectorContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>ArraySelector</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.selector"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitArraySelector([NotNull] JavaGrammarParser.ArraySelectorContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>BasicTypeType</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.type"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitBasicTypeType([NotNull] JavaGrammarParser.BasicTypeTypeContext context);
-		/// <summary>
-		/// Visit a parse tree produced by the <c>ReferenceTypeType</c>
-		/// labeled alternative in <see cref="JavaGrammarParser.type"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitReferenceTypeType([NotNull] JavaGrammarParser.ReferenceTypeTypeContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.basicType"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitBasicType([NotNull] JavaGrammarParser.BasicTypeContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.referenceType"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitReferenceType([NotNull] JavaGrammarParser.ReferenceTypeContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.typeArguments"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitTypeArguments([NotNull] JavaGrammarParser.TypeArgumentsContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.referenceTypeList"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitReferenceTypeList([NotNull] JavaGrammarParser.ReferenceTypeListContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.modifier"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitModifier([NotNull] JavaGrammarParser.ModifierContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.variableModifier"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitVariableModifier([NotNull] JavaGrammarParser.VariableModifierContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.typeArgumentsOrDiamond"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitTypeArgumentsOrDiamond([NotNull] JavaGrammarParser.TypeArgumentsOrDiamondContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.creator"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitCreator([NotNull] JavaGrammarParser.CreatorContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.createdName"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitCreatedName([NotNull] JavaGrammarParser.CreatedNameContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.classCreatorRest"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitClassCreatorRest([NotNull] JavaGrammarParser.ClassCreatorRestContext context);
-		/// <summary>
-		/// Visit a parse tree produced by <see cref="JavaGrammarParser.arrayCreatorRest"/>.
-		/// </summary>
-		/// <param name="context">The parse tree.</param>
-		/// <return>The visitor result.</return>
-		Result VisitArrayCreatorRest([NotNull] JavaGrammarParser.ArrayCreatorRestContext context);
-	}
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitIdentifier([NotNull] JavaGrammarParser.IdentifierContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.literal"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitLiteral([NotNull] JavaGrammarParser.LiteralContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.compilationUnit"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitCompilationUnit([NotNull] JavaGrammarParser.CompilationUnitContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.typeDeclaration"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitTypeDeclaration([NotNull] JavaGrammarParser.TypeDeclarationContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.importDeclaration"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitImportDeclaration([NotNull] JavaGrammarParser.ImportDeclarationContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.qualifiedIdentifier"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitQualifiedIdentifier([NotNull] JavaGrammarParser.QualifiedIdentifierContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.classDeclaration"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitClassDeclaration([NotNull] JavaGrammarParser.ClassDeclarationContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.classBody"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitClassBody([NotNull] JavaGrammarParser.ClassBodyContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>EmptyClassBodyDeclaration</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.classBodyDeclaration"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitEmptyClassBodyDeclaration([NotNull] JavaGrammarParser.EmptyClassBodyDeclarationContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>MemberClassBodyDeclaration</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.classBodyDeclaration"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitMemberClassBodyDeclaration([NotNull] JavaGrammarParser.MemberClassBodyDeclarationContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>StaticBlockClassBodyDeclaration</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.classBodyDeclaration"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitStaticBlockClassBodyDeclaration([NotNull] JavaGrammarParser.StaticBlockClassBodyDeclarationContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>FieldOrMethodMember</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.memberDecl"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitFieldOrMethodMember([NotNull] JavaGrammarParser.FieldOrMethodMemberContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>VoidMethodMember</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.memberDecl"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitVoidMethodMember([NotNull] JavaGrammarParser.VoidMethodMemberContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.methodOrFieldDecl"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitMethodOrFieldDecl([NotNull] JavaGrammarParser.MethodOrFieldDeclContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>FieldRest</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.methodOrFieldRest"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitFieldRest([NotNull] JavaGrammarParser.FieldRestContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>MethodRest</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.methodOrFieldRest"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitMethodRest([NotNull] JavaGrammarParser.MethodRestContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.fieldDeclaratorsRest"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitFieldDeclaratorsRest([NotNull] JavaGrammarParser.FieldDeclaratorsRestContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.methodDeclaratorRest"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitMethodDeclaratorRest([NotNull] JavaGrammarParser.MethodDeclaratorRestContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.voidMethodDeclaratorRest"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitVoidMethodDeclaratorRest([NotNull] JavaGrammarParser.VoidMethodDeclaratorRestContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.formalParameters"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitFormalParameters([NotNull] JavaGrammarParser.FormalParametersContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.formalParameterDecls"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitFormalParameterDecls([NotNull] JavaGrammarParser.FormalParameterDeclsContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.formalParameterDeclsRest"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitFormalParameterDeclsRest([NotNull] JavaGrammarParser.FormalParameterDeclsRestContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.variableDeclaratorId"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitVariableDeclaratorId([NotNull] JavaGrammarParser.VariableDeclaratorIdContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.variableDeclarator"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitVariableDeclarator([NotNull] JavaGrammarParser.VariableDeclaratorContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.variableDeclaratorRest"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitVariableDeclaratorRest([NotNull] JavaGrammarParser.VariableDeclaratorRestContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.variableDeclarators"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitVariableDeclarators([NotNull] JavaGrammarParser.VariableDeclaratorsContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.variableInitializer"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitVariableInitializer([NotNull] JavaGrammarParser.VariableInitializerContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.arrayInitializer"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitArrayInitializer([NotNull] JavaGrammarParser.ArrayInitializerContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.variableInitializers"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitVariableInitializers([NotNull] JavaGrammarParser.VariableInitializersContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.block"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitBlock([NotNull] JavaGrammarParser.BlockContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.blockStatements"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitBlockStatements([NotNull] JavaGrammarParser.BlockStatementsContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>LocalVariableBlockStatement</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.blockStatement"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitLocalVariableBlockStatement([NotNull] JavaGrammarParser.LocalVariableBlockStatementContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>LabeledStatementBlockStatement</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.blockStatement"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitLabeledStatementBlockStatement([NotNull] JavaGrammarParser.LabeledStatementBlockStatementContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>StatementBlockStatement</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.blockStatement"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitStatementBlockStatement([NotNull] JavaGrammarParser.StatementBlockStatementContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.localVariableDeclarationStatement"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitLocalVariableDeclarationStatement([NotNull] JavaGrammarParser.LocalVariableDeclarationStatementContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>InnerBlockStatement</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.statement"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitInnerBlockStatement([NotNull] JavaGrammarParser.InnerBlockStatementContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>EmptyStatement</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.statement"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitEmptyStatement([NotNull] JavaGrammarParser.EmptyStatementContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>LabeledStatement</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.statement"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitLabeledStatement([NotNull] JavaGrammarParser.LabeledStatementContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>IfStatement</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.statement"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitIfStatement([NotNull] JavaGrammarParser.IfStatementContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>SwitchStatement</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.statement"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitSwitchStatement([NotNull] JavaGrammarParser.SwitchStatementContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>WhileStatement</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.statement"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitWhileStatement([NotNull] JavaGrammarParser.WhileStatementContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>DoWhileStatement</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.statement"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitDoWhileStatement([NotNull] JavaGrammarParser.DoWhileStatementContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>ForStatement</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.statement"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitForStatement([NotNull] JavaGrammarParser.ForStatementContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>BreakStatement</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.statement"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitBreakStatement([NotNull] JavaGrammarParser.BreakStatementContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>ContinueStatement</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.statement"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitContinueStatement([NotNull] JavaGrammarParser.ContinueStatementContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>ReturnStatement</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.statement"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitReturnStatement([NotNull] JavaGrammarParser.ReturnStatementContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>ExpressionStatement</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.statement"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitExpressionStatement([NotNull] JavaGrammarParser.ExpressionStatementContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.statementExpression"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitStatementExpression([NotNull] JavaGrammarParser.StatementExpressionContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.switchBlockStatementGroups"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitSwitchBlockStatementGroups([NotNull] JavaGrammarParser.SwitchBlockStatementGroupsContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.switchBlockStatementGroup"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitSwitchBlockStatementGroup([NotNull] JavaGrammarParser.SwitchBlockStatementGroupContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.switchLabels"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitSwitchLabels([NotNull] JavaGrammarParser.SwitchLabelsContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>CaseExprLabel</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.switchLabel"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitCaseExprLabel([NotNull] JavaGrammarParser.CaseExprLabelContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>CaseEnumLabel</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.switchLabel"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitCaseEnumLabel([NotNull] JavaGrammarParser.CaseEnumLabelContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>DefaultLabel</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.switchLabel"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitDefaultLabel([NotNull] JavaGrammarParser.DefaultLabelContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.enumConstantName"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitEnumConstantName([NotNull] JavaGrammarParser.EnumConstantNameContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>EnhancedForControl</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.forControl"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitEnhancedForControl([NotNull] JavaGrammarParser.EnhancedForControlContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>TraditionalForControl</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.forControl"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitTraditionalForControl([NotNull] JavaGrammarParser.TraditionalForControlContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.forVarControl"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitForVarControl([NotNull] JavaGrammarParser.ForVarControlContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.forVarControlRest"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitForVarControlRest([NotNull] JavaGrammarParser.ForVarControlRestContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.forVariableDeclaratorsRest"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitForVariableDeclaratorsRest([NotNull] JavaGrammarParser.ForVariableDeclaratorsRestContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.forInit"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitForInit([NotNull] JavaGrammarParser.ForInitContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.forUpdate"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitForUpdate([NotNull] JavaGrammarParser.ForUpdateContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>PrimaryExpression</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.expression"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitPrimaryExpression([NotNull] JavaGrammarParser.PrimaryExpressionContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>AssignmentExpression</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.expression"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitAssignmentExpression([NotNull] JavaGrammarParser.AssignmentExpressionContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>InfixExpression</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.expression1"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitInfixExpression([NotNull] JavaGrammarParser.InfixExpressionContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>SimpleExpression2</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.expression1"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitSimpleExpression2([NotNull] JavaGrammarParser.SimpleExpression2Context context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.infixOp"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitInfixOp([NotNull] JavaGrammarParser.InfixOpContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>PrefixExpression</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.expression2"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitPrefixExpression([NotNull] JavaGrammarParser.PrefixExpressionContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>CastExpression</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.expression2"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitCastExpression([NotNull] JavaGrammarParser.CastExpressionContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>PostfixExpression</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.expression2"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitPostfixExpression([NotNull] JavaGrammarParser.PostfixExpressionContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.prefixOp"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitPrefixOp([NotNull] JavaGrammarParser.PrefixOpContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.postfixOp"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitPostfixOp([NotNull] JavaGrammarParser.PostfixOpContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>LiteralPrimary</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.primary"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitLiteralPrimary([NotNull] JavaGrammarParser.LiteralPrimaryContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>ParenthesizedPrimary</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.primary"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitParenthesizedPrimary([NotNull] JavaGrammarParser.ParenthesizedPrimaryContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>IdentifierPrimary</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.primary"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitIdentifierPrimary([NotNull] JavaGrammarParser.IdentifierPrimaryContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>NewCreatorPrimary</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.primary"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitNewCreatorPrimary([NotNull] JavaGrammarParser.NewCreatorPrimaryContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.parExpression"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitParExpression([NotNull] JavaGrammarParser.ParExpressionContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>ClassLiteralSuffix</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.identifierSuffix"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitClassLiteralSuffix([NotNull] JavaGrammarParser.ClassLiteralSuffixContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>ArrayAccessSuffix</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.identifierSuffix"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitArrayAccessSuffix([NotNull] JavaGrammarParser.ArrayAccessSuffixContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>ArgumentsSuffix</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.identifierSuffix"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitArgumentsSuffix([NotNull] JavaGrammarParser.ArgumentsSuffixContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.arguments"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitArguments([NotNull] JavaGrammarParser.ArgumentsContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.expressionList"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitExpressionList([NotNull] JavaGrammarParser.ExpressionListContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>MethodOrFieldSelector</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.selector"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitMethodOrFieldSelector([NotNull] JavaGrammarParser.MethodOrFieldSelectorContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>ArraySelector</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.selector"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitArraySelector([NotNull] JavaGrammarParser.ArraySelectorContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>BasicTypeType</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.type"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitBasicTypeType([NotNull] JavaGrammarParser.BasicTypeTypeContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>ReferenceTypeType</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.type"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitReferenceTypeType([NotNull] JavaGrammarParser.ReferenceTypeTypeContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.basicType"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitBasicType([NotNull] JavaGrammarParser.BasicTypeContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.referenceType"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitReferenceType([NotNull] JavaGrammarParser.ReferenceTypeContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.typeArguments"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitTypeArguments([NotNull] JavaGrammarParser.TypeArgumentsContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.referenceTypeList"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitReferenceTypeList([NotNull] JavaGrammarParser.ReferenceTypeListContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.modifier"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitModifier([NotNull] JavaGrammarParser.ModifierContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.variableModifier"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitVariableModifier([NotNull] JavaGrammarParser.VariableModifierContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.typeArgumentsOrDiamond"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitTypeArgumentsOrDiamond([NotNull] JavaGrammarParser.TypeArgumentsOrDiamondContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.creator"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitCreator([NotNull] JavaGrammarParser.CreatorContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.createdName"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitCreatedName([NotNull] JavaGrammarParser.CreatedNameContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.classCreatorRest"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitClassCreatorRest([NotNull] JavaGrammarParser.ClassCreatorRestContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.arrayCreatorRest"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitArrayCreatorRest([NotNull] JavaGrammarParser.ArrayCreatorRestContext context);
 }
