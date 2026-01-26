@@ -26,6 +26,142 @@ namespace LexerParserLibrary
         private readonly Stack<Dictionary<string, SymbolInfo>> _scopes = new Stack<Dictionary<string, SymbolInfo>>();
         private readonly Stack<string> _scopeNames = new Stack<string>();
         private readonly Dictionary<string, string> _classTypes = new Dictionary<string, string>();
+        private readonly Dictionary<string, bool> _importedNames = new Dictionary<string, bool>();
+        private readonly HashSet<string> _wildcardImports = new HashSet<string>();
+        private readonly Dictionary<string, string> _packages = new Dictionary<string, string>();
+        private readonly HashSet<string> _currentPackageClasses = new HashSet<string>();
+
+        public void AddImport(string name, bool isStatic, bool isWildcard)
+        {
+            _importedNames[name] = isStatic;
+
+            if (isWildcard)
+            {
+                _wildcardImports.Add(name);
+            }
+        }
+
+        public bool IsImported(string name)
+        {
+            return _importedNames.ContainsKey(name);
+        }
+
+        public List<string> GetConflictingWildcards(string packageName)
+        {
+            List<string> conflicts = new List<string>();
+
+            foreach (var wildcard in _wildcardImports)
+            {
+                if (wildcard.StartsWith(packageName + ".") || packageName.StartsWith(wildcard + "."))
+                {
+                    conflicts.Add(wildcard);
+                }
+            }
+
+            return conflicts;
+        }
+
+        public bool HasPackage(string packageName)
+        {
+            return _packages.ContainsKey(packageName) ||
+                   _packages.Values.Any(pkg => pkg.StartsWith(packageName + "."));
+        }
+
+        public bool IsClass(string className)
+        {
+            // Обработка стандартных классов Java
+            if (IsStandardJavaClass(className))
+            {
+                return true;
+            }
+
+            // Обработка импортированных классов
+            if (IsImportedClass(className))
+            {
+                return true;
+            }
+
+            // Обработка объявленных в коде классов
+            if (_classTypes.ContainsKey(className))
+            {
+                return true;
+            }
+
+            // Обработка вложенных классов (MyClass.InnerClass)
+            if (className.Contains("."))
+            {
+                string[] parts = className.Split('.');
+                if (parts.Length > 1)
+                {
+                    string outerClass = parts[0];
+                    string innerClass = string.Join(".", parts.Skip(1));
+
+                    // Проверяем, существует ли внешний класс
+                    if (IsClass(outerClass))
+                    {
+                        // Проверяем наличие вложенного класса (упрощенная логика)
+                        return true; // В реальной реализации нужна более сложная проверка
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private bool IsStandardJavaClass(string className)
+        {
+            // Стандартные классы Java (можно расширить список)
+            HashSet<string> standardClasses = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "Object", "String", "Integer", "Double", "Boolean", "Character",
+        "Byte", "Short", "Long", "Float", "Void", "Class", "System", "Math",
+        "List", "ArrayList", "Map", "HashMap", "Set", "HashSet", "Iterator",
+        "Collections", "Arrays", "Thread", "Runnable", "Exception", "RuntimeException"
+    };
+
+            // Проверяем простое имя класса
+            if (standardClasses.Contains(className))
+            {
+                return true;
+            }
+
+            // Проверяем полные имена (java.lang.String)
+            if (className.StartsWith("java.") || className.StartsWith("javax."))
+            {
+                string simpleName = className.Substring(className.LastIndexOf('.') + 1);
+                return standardClasses.Contains(simpleName);
+            }
+
+            return false;
+        }
+
+        private bool IsImportedClass(string className)
+        {
+            // Упрощенная проверка импортов (в реальной реализации нужна более сложная логика)
+            return _importedNames.ContainsKey(className);
+
+            // Более полная реализация должна:
+            // 1. Проверять импорты с wildcard (import java.util.*)
+            // 2. Проверять статические импорты
+            // 3. Учитывать конфликты имен
+        }
+
+        public bool HasClassMember(string className, string memberName)
+        {
+            // Простая реализация для демонстрации
+            if (className == "Math")
+            {
+                return memberName == "PI" || memberName == "E" ||
+                       memberName == "sqrt" || memberName == "pow";
+            }
+
+            return false;
+        }
+
+        public bool HasClassInCurrentPackage(string className)
+        {
+            return _currentPackageClasses.Contains(className);
+        }
 
         public SymbolTable()
         {
@@ -106,11 +242,6 @@ namespace LexerParserLibrary
             }
             return null;
         }
-
-        public bool IsClass(string name)
-        {
-            return _classTypes.ContainsKey(name);
-        }
     }
 
     // Исключение для семантических ошибок
@@ -132,6 +263,7 @@ namespace LexerParserLibrary
     {
         private readonly SymbolTable _symbolTable = new SymbolTable();
         private readonly List<SemanticException> _errors = new List<SemanticException>();
+        private readonly Stack<int> _defaultLabelCounts = new Stack<int>();
 
         public IEnumerable<SemanticException> Errors => _errors;
         public bool HasErrors => _errors.Count > 0;
@@ -1193,5 +1325,654 @@ namespace LexerParserLibrary
             return true; // Упрощенная реализация
         }
 
+        // Анализ цикла do-while
+        public override object VisitDoWhileStatement(JavaGrammarParser.DoWhileStatementContext context)
+        {
+            // Проверяем тип условия в do-while
+            var condition = context.parExpression().expression();
+            string conditionType = GetExpressionType(condition);
+
+            if (conditionType != "boolean")
+            {
+                ReportError($"Do-while condition must be of boolean type, found: {conditionType}", context);
+            }
+
+            // Обрабатываем тело цикла
+            Visit(context.statement());
+
+            return base.VisitDoWhileStatement(context);
+        }
+
+        // Анализ оператора break
+        public override object VisitBreakStatement(JavaGrammarParser.BreakStatementContext context)
+        {
+            // Проверяем, что break используется внутри цикла или switch
+            if (!IsInsideLoopOrSwitch())
+            {
+                ReportError("Break statement must be inside a loop or switch statement", context);
+            }
+
+            // Если есть метка, проверяем ее существование
+            if (context.identifier() != null)
+            {
+                string labelName = context.identifier().GetText();
+                if (!_symbolTable.IsDeclared(labelName))
+                {
+                    ReportError($"Label '{labelName}' is not declared", context);
+                }
+            }
+
+            return base.VisitBreakStatement(context);
+        }
+
+        // Анализ оператора continue
+        public override object VisitContinueStatement(JavaGrammarParser.ContinueStatementContext context)
+        {
+            // Проверяем, что continue используется внутри цикла
+            if (!IsInsideLoop())
+            {
+                ReportError("Continue statement must be inside a loop", context);
+            }
+
+            // Если есть метка, проверяем ее существование
+            if (context.identifier() != null)
+            {
+                string labelName = context.identifier().GetText();
+                if (!_symbolTable.IsDeclared(labelName))
+                {
+                    ReportError($"Label '{labelName}' is not declared", context);
+                }
+            }
+
+            return base.VisitContinueStatement(context);
+        }
+
+        // Анализ оператора switch
+        // Анализ оператора switch
+        public override object VisitSwitchStatement(JavaGrammarParser.SwitchStatementContext context)
+        {
+            // Добавляем новый счетчик для текущего switch-блока
+            _defaultLabelCounts.Push(0);
+            try
+            {
+                // Проверяем тип выражения в switch
+                string switchType = GetExpressionType(context.parExpression().expression());
+
+                if (!IsValidSwitchType(switchType))
+                {
+                    ReportError($"Invalid type for switch expression: {switchType}. Valid types are: int, char, byte, short, String, enum", context);
+                }
+
+                // Обрабатываем группы операторов в switch
+                Visit(context.switchBlockStatementGroups());
+
+                return base.VisitSwitchStatement(context);
+            }
+            finally
+            {
+                // Удаляем счетчик при выходе из switch-блока
+                if (_defaultLabelCounts.Count > 0)
+                {
+                    _defaultLabelCounts.Pop();
+                }
+            }
+        }
+
+        // Вспомогательные методы
+
+        private bool IsInsideLoopOrSwitch()
+        {
+            string currentScope = _symbolTable.GetCurrentScope();
+            return currentScope.Contains("for") || currentScope.Contains("while") || currentScope.Contains("do") || currentScope.Contains("switch");
+        }
+
+        private bool IsInsideLoop()
+        {
+            string currentScope = _symbolTable.GetCurrentScope();
+            return currentScope.Contains("for") || currentScope.Contains("while") || currentScope.Contains("do");
+        }
+
+        private bool IsValidSwitchType(string type)
+        {
+            if (type == null) return false;
+
+            type = type.ToLower();
+            return type == "int" || type == "char" || type == "byte" || type == "short" ||
+                   type == "string" || type.EndsWith("enum") || type.Contains("enum");
+        }
+
+        // Анализ групп операторов в блоке switch
+        public override object VisitSwitchBlockStatementGroups(JavaGrammarParser.SwitchBlockStatementGroupsContext context)
+        {
+            // Проверяем наличие дублирующихся case-меток
+            HashSet<string> caseValues = new HashSet<string>();
+
+            foreach (var group in context.switchBlockStatementGroup())
+            {
+                foreach (var label in group.switchLabels().switchLabel())
+                {
+                    // Проверяем тип метки с помощью оператора is
+                    if (label is JavaGrammarParser.CaseExprLabelContext caseExprLabel &&
+                        caseExprLabel.expression() != null)
+                    {
+                        string caseValue = caseExprLabel.expression().GetText();
+                        if (!caseValues.Add(caseValue))
+                        {
+                            ReportError($"Duplicate case label: {caseValue}", label);
+                        }
+                    }
+                    else if (label is JavaGrammarParser.DefaultLabelContext)
+                    {
+                        if (!caseValues.Add("default"))
+                        {
+                            ReportError("Duplicate default label in switch statement", label);
+                        }
+                    }
+                }
+
+                // Обрабатываем операторы в группе
+                Visit(group.blockStatements());
+            }
+
+            // Проверяем, что все пути выполнения завершаются оператором break или return
+            CheckSwitchFallThrough(context);
+
+            return base.VisitSwitchBlockStatementGroups(context);
+        }
+
+        // Проверка возможного fall-through в switch
+        private void CheckSwitchFallThrough(JavaGrammarParser.SwitchBlockStatementGroupsContext context)
+        {
+            // Получаем все группы case
+            var groups = context.switchBlockStatementGroup();
+
+            if (groups != null && groups.Length > 0)
+            {
+                // Берем последнюю группу
+                var lastGroup = groups[groups.Length - 1];
+
+                // Получаем все операторы в последней группе
+                var blockStatements = lastGroup.blockStatements();
+                if (blockStatements != null)
+                {
+                    var statements = blockStatements.blockStatement();
+
+                    if (statements != null && statements.Length > 0)
+                    {
+                        // Берем последний оператор в группе
+                        var lastStatement = statements[statements.Length - 1];
+
+                        bool hasBreakOrReturn = false;
+
+                        // Проверяем тип последнего оператора
+                        if (lastStatement is JavaGrammarParser.StatementBlockStatementContext stmtBlock)
+                        {
+                            var statementCtx = stmtBlock.statement();
+
+                            if (statementCtx != null)
+                            {
+                                // Проверяем, является ли последний оператор break или return
+                                if (statementCtx is JavaGrammarParser.BreakStatementContext ||
+                                    statementCtx is JavaGrammarParser.ReturnStatementContext)
+                                {
+                                    hasBreakOrReturn = true;
+                                }
+                            }
+                        }
+                        // Проверяем другие возможные типы операторов
+                        else if (lastStatement is JavaGrammarParser.LocalVariableBlockStatementContext localVarBlock)
+                        {
+                            // Для локальных переменных проверяем следующий оператор в блоке
+                            // Это упрощенная реализация для демонстрации
+                        }
+                        else if (lastStatement is JavaGrammarParser.LabeledStatementBlockStatementContext labeledBlock)
+                        {
+                            // Для помеченных операторов проверяем их содержимое
+                        }
+
+                        if (!hasBreakOrReturn)
+                        {
+                            // Это предупреждение, а не ошибка, так как fall-through иногда используется намеренно
+                            // ReportWarning("Possible fall-through in switch statement", context);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Анализ группы операторов в блоке switch (case ветка со всеми операторами)
+        public override object VisitSwitchBlockStatementGroup(JavaGrammarParser.SwitchBlockStatementGroupContext context)
+        {
+            // Сначала анализируем метки case/default
+            Visit(context.switchLabels());
+
+            // Затем анализируем операторы в группе
+            Visit(context.blockStatements());
+
+            return null;
+        }
+
+        // Анализ меток case/default в switch
+        public override object VisitSwitchLabels(JavaGrammarParser.SwitchLabelsContext context)
+        {
+            bool hasDefaultLabel = false;
+
+            foreach (var label in context.switchLabel())
+            {
+                // Проверяем наличие нескольких default-меток в одной группе
+                if (label is JavaGrammarParser.DefaultLabelContext)
+                {
+                    if (hasDefaultLabel)
+                    {
+                        ReportError("Duplicate default label in switch statement group", label);
+                    }
+                    hasDefaultLabel = true;
+                }
+
+                // Посещаем каждую метку
+                Visit(label);
+            }
+
+            return null;
+        }
+
+        // Анализ метки case с выражением (case 5:)
+        public override object VisitCaseExprLabel(JavaGrammarParser.CaseExprLabelContext context)
+        {
+            if (context.expression() != null)
+            {
+                string caseType = GetExpressionType(context.expression());
+
+                // Проверяем, что тип выражения допустим в case
+                if (!IsValidCaseType(caseType))
+                {
+                    ReportError($"Invalid type for case expression: {caseType}. Valid types are: int, char, byte, short, String, enum", context);
+                }
+
+                // Проверяем, что выражение является константой (упрощенная проверка)
+                if (!IsConstantExpression(context.expression()))
+                {
+                    ReportError("Case expression must be a constant expression", context);
+                }
+            }
+
+            return base.VisitCaseExprLabel(context);
+        }
+
+        // Анализ метки case с константой перечисления (case MY_ENUM:)
+        public override object VisitCaseEnumLabel(JavaGrammarParser.CaseEnumLabelContext context)
+        {
+            if (context.enumConstantName() != null && context.enumConstantName().identifier() != null)
+            {
+                string enumName = context.enumConstantName().identifier().GetText();
+
+                // Проверяем, что константа перечисления объявлена
+                if (!_symbolTable.IsDeclared(enumName))
+                {
+                    ReportError($"Enum constant '{enumName}' is not declared", context);
+                }
+            }
+
+            return base.VisitCaseEnumLabel(context);
+        }
+
+        // Анализ метки default
+        public override object VisitDefaultLabel(JavaGrammarParser.DefaultLabelContext context)
+        {
+            // Проверяем, находимся ли мы внутри switch-блока
+            if (_defaultLabelCounts.Count > 0)
+            {
+                // Получаем текущее количество default-меток для этого switch-блока
+                int currentCount = _defaultLabelCounts.Pop();
+                currentCount++;
+
+                // Если уже есть default-метка, сообщаем об ошибке
+                if (currentCount > 1)
+                {
+                    ReportError("Duplicate default label in switch statement. Only one default label is allowed per switch block.", context);
+                }
+
+                // Обновляем счетчик
+                _defaultLabelCounts.Push(currentCount);
+            }
+
+            // Также проверяем, что default является последней меткой в группе
+            var switchLabels = context.Parent as JavaGrammarParser.SwitchLabelsContext;
+            if (switchLabels != null)
+            {
+                var allLabels = switchLabels.switchLabel();
+                int defaultIndex = Array.IndexOf(allLabels, context);
+
+                if (defaultIndex >= 0 && defaultIndex < allLabels.Length - 1)
+                {
+                    ReportError("Default label should be the last label in a switch block group for better readability and maintainability.", context);
+                }
+            }
+
+            return base.VisitDefaultLabel(context);
+        }
+
+        // Вспомогательные методы
+        private bool IsValidCaseType(string type)
+        {
+            if (type == null) return false;
+
+            type = type.ToLower();
+            return type == "int" || type == "char" || type == "byte" || type == "short" ||
+                   type == "string" || type.EndsWith("enum") || type.Contains("enum");
+        }
+
+        private bool IsConstantExpression(JavaGrammarParser.ExpressionContext context)
+        {
+            if (context == null)
+                return false;
+
+            // Проверяем простейшие случаи - литералы
+            if (context is JavaGrammarParser.PrimaryExpressionContext primaryExpr1)
+            {
+                var expr1 = primaryExpr1.expression1();
+
+                if (expr1 != null)
+                {
+                    if (expr1 is JavaGrammarParser.SimpleExpression2Context simpleExpr2)
+                    {
+                        var expr2 = simpleExpr2.expression2();
+                        return IsExpression2Constant(expr2);
+                    }
+                    // Инфиксные выражения обрабатываются отдельно ниже
+                }
+            }
+
+            // Проверяем выражения с операторами
+            if (context is JavaGrammarParser.AssignmentExpressionContext)
+            {
+                // Присваивание не может быть константным выражением
+                return false;
+            }
+
+            // Проверяем выражения в скобках
+            if (context.ChildCount > 2)
+            {
+                var firstChild = context.GetChild(0);
+                var lastChild = context.GetChild(context.ChildCount - 1);
+
+                if (firstChild != null && lastChild != null &&
+                    firstChild.GetText() == "(" && lastChild.GetText() == ")")
+                {
+                    // Ищем выражение внутри скобок
+                    for (int i = 1; i < context.ChildCount - 1; i++)
+                    {
+                        var child = context.GetChild(i);
+                        if (child is JavaGrammarParser.ExpressionContext innerExpr)
+                        {
+                            return IsConstantExpression(innerExpr);
+                        }
+                        else if (child is JavaGrammarParser.ParExpressionContext parExpr)
+                        {
+                            var expr = parExpr.expression();
+                            if (expr != null)
+                            {
+                                return IsConstantExpression(expr);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Проверяем, содержит ли выражение инфиксные операции
+            if (context is JavaGrammarParser.PrimaryExpressionContext)
+            {
+                var primaryExpr2 = context as JavaGrammarParser.PrimaryExpressionContext;
+                var expr1 = primaryExpr2.expression1();
+
+                if (expr1 != null && expr1 is JavaGrammarParser.InfixExpressionContext infixExpr1)
+                {
+                    return IsInfixExpressionConstant(infixExpr1);
+                }
+
+                // Проверяем префиксные выражения через expression2
+                if (expr1 != null)
+                {
+                    JavaGrammarParser.Expression2Context expr2 = null;
+
+                    if (expr1 is JavaGrammarParser.SimpleExpression2Context simpleExpr2)
+                    {
+                        expr2 = simpleExpr2.expression2();
+                    }
+                    else if (expr1 is JavaGrammarParser.InfixExpressionContext infixExpr2)
+                    {
+                        if (infixExpr2.expression2().Length > 0)
+                        {
+                            expr2 = infixExpr2.expression2()[0];
+                        }
+                    }
+
+                    if (expr2 != null && expr2 is JavaGrammarParser.PrefixExpressionContext prefixExpr)
+                    {
+                        return IsExpression2Constant(expr2);
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        // Оставшиеся методы остаются без изменений
+        private bool IsExpression2Constant(JavaGrammarParser.Expression2Context context)
+        {
+            if (context == null) return false;
+
+            JavaGrammarParser.PostfixExpressionContext postfixExpr = context as JavaGrammarParser.PostfixExpressionContext;
+            if (postfixExpr != null)
+            {
+                var primary = postfixExpr.primary();
+
+                if (primary != null)
+                {
+                    // Литералы всегда являются константами
+                    if (primary is JavaGrammarParser.LiteralPrimaryContext)
+                    {
+                        return true;
+                    }
+
+                    // Проверяем идентификаторы - это могут быть константные переменные
+                    if (primary is JavaGrammarParser.IdentifierPrimaryContext idPrimary)
+                    {
+                        if (idPrimary.identifier().Length > 0)
+                        {
+                            string varName = idPrimary.identifier()[0].GetText();
+                            var symbol = _symbolTable.GetSymbol(varName);
+
+                            // Константные переменные (final и инициализированные)
+                            return symbol != null && symbol.IsFinal && symbol.IsInitialized;
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private bool IsInfixExpressionConstant(JavaGrammarParser.InfixExpressionContext context)
+        {
+            if (context == null) return false;
+
+            bool allOperandsConstant = true;
+
+            // Проверяем все операнды в инфиксном выражении
+            foreach (var expr2 in context.expression2())
+            {
+                if (!IsExpression2Constant(expr2))
+                {
+                    allOperandsConstant = false;
+                    break;
+                }
+            }
+
+            return allOperandsConstant;
+        }
+
+        // Анализ объявления импорта
+        public override object VisitImportDeclaration(JavaGrammarParser.ImportDeclarationContext context)
+        {
+            bool isStatic = context.STATIC() != null;
+            var qualifiedIdentifier = context.qualifiedIdentifier();
+            bool isWildcard = false;
+
+            string importedName = "";
+
+            if (qualifiedIdentifier != null)
+            {
+                importedName = GetQualifiedIdentifierName(qualifiedIdentifier);
+
+                // Проверяем, является ли последний компонент wildcard (*)
+                if (context.DOT() != null && context.GetChild(context.ChildCount - 2).GetText() == "*")
+                {
+                    isWildcard = true;
+                }
+            }
+
+            // Проверяем корректность статического импорта
+            if (isStatic && !isWildcard)
+            {
+                // Статический импорт должен указывать на член класса (поле, метод)
+                if (!importedName.Contains(".")) // Проверяем, есть ли разделение класса и члена
+                {
+                    ReportError($"Static import must specify a member: {importedName}", context);
+                }
+                else
+                {
+                    // Проверяем существование класса и его члена
+                    string className = importedName.Substring(0, importedName.LastIndexOf('.'));
+                    string memberName = importedName.Substring(importedName.LastIndexOf('.') + 1);
+
+                    if (!_symbolTable.IsClass(className))
+                    {
+                        ReportError($"Class not found for static import: {className}", context);
+                    }
+                    else if (!_symbolTable.HasClassMember(className, memberName))
+                    {
+                        ReportError($"Member not found in class for static import: {className}.{memberName}", context);
+                    }
+                }
+            }
+            else if (!isStatic)
+            {
+                // Обычный импорт должен указывать на класс или пакет
+                if (isWildcard)
+                {
+                    // Импорт всех классов из пакета
+                    string packageName = importedName;
+                    if (!_symbolTable.HasPackage(packageName))
+                    {
+                        ReportError($"Package not found: {packageName}", context);
+                    }
+                }
+                else
+                {
+                    // Импорт конкретного класса
+                    if (!_symbolTable.IsClass(importedName))
+                    {
+                        ReportError($"Class not found: {importedName}", context);
+                    }
+                }
+            }
+
+            // Проверяем конфликты импортов
+            CheckImportConflicts(importedName, isStatic, isWildcard, context);
+
+            return base.VisitImportDeclaration(context);
+        }
+
+        // Анализ квалифицированного идентификатора
+        public override object VisitQualifiedIdentifier(JavaGrammarParser.QualifiedIdentifierContext context)
+        {
+            string qualifiedName = GetQualifiedIdentifierName(context);
+            string lastPart = qualifiedName;
+
+            // Извлекаем последнюю часть идентификатора (имя класса или члена)
+            if (qualifiedName.Contains("."))
+            {
+                lastPart = qualifiedName.Substring(qualifiedName.LastIndexOf('.') + 1);
+            }
+
+            // Проверяем существование пакета/класса
+            if (!qualifiedName.Contains(".") || _symbolTable.HasPackage(qualifiedName))
+            {
+                // Это пакет или простое имя
+                if (!_symbolTable.HasPackage(qualifiedName))
+                {
+                    ReportError($"Package not found: {qualifiedName}", context);
+                }
+            }
+            else
+            {
+                // Это класс в пакете
+                string className = qualifiedName;
+                string packageName = qualifiedName.Substring(0, qualifiedName.LastIndexOf('.'));
+
+                if (!_symbolTable.HasPackage(packageName))
+                {
+                    ReportError($"Package not found: {packageName}", context);
+                }
+                else if (!_symbolTable.IsClass(className))
+                {
+                    ReportError($"Class not found: {className}", context);
+                }
+            }
+
+            return base.VisitQualifiedIdentifier(context);
+        }
+
+        // Вспомогательные методы
+
+        private string GetQualifiedIdentifierName(JavaGrammarParser.QualifiedIdentifierContext context)
+        {
+            if (context == null) return "";
+
+            List<string> parts = new List<string>();
+            foreach (var identifier in context.identifier())
+            {
+                if (identifier != null)
+                {
+                    parts.Add(identifier.GetText());
+                }
+            }
+
+            return string.Join(".", parts);
+        }
+
+        private void CheckImportConflicts(string importedName, bool isStatic, bool isWildcard, ParserRuleContext context)
+        {
+            // Простая проверка: нельзя импортировать один и тот же класс дважды
+            if (_symbolTable.IsImported(importedName))
+            {
+                ReportError($"Duplicate import: {importedName}", context);
+            }
+            else
+            {
+                // Добавляем импорт в таблицу для дальнейшей проверки конфликтов
+                _symbolTable.AddImport(importedName, isStatic, isWildcard);
+
+                // Проверяем конфликты с уже объявленными классами в текущем пакете
+                if (!isStatic && !isWildcard && _symbolTable.HasClassInCurrentPackage(importedName))
+                {
+                    ReportError($"Import conflicts with locally defined class: {importedName}", context);
+                }
+
+                // Проверяем конфликты между wildcard-импортами
+                if (isWildcard)
+                {
+                    var conflictingImports = _symbolTable.GetConflictingWildcards(importedName);
+                    if (conflictingImports.Count > 0)
+                    {
+                        foreach (var conflict in conflictingImports)
+                        {
+                            ReportError($"Wildcard import conflicts with another wildcard import: {importedName} and {conflict}", context);
+                        }
+                    }
+                }
+            }
+        }
     }
 }
