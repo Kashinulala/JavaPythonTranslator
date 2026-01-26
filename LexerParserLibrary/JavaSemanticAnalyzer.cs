@@ -112,12 +112,12 @@ namespace LexerParserLibrary
         {
             // Стандартные классы Java (можно расширить список)
             HashSet<string> standardClasses = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-    {
-        "Object", "String", "Integer", "Double", "Boolean", "Character",
-        "Byte", "Short", "Long", "Float", "Void", "Class", "System", "Math",
-        "List", "ArrayList", "Map", "HashMap", "Set", "HashSet", "Iterator",
-        "Collections", "Arrays", "Thread", "Runnable", "Exception", "RuntimeException"
-    };
+            {
+                "Object", "String", "Integer", "Double", "Boolean", "Character",
+                "Byte", "Short", "Long", "Float", "Void", "Class", "System", "Math",
+                "List", "ArrayList", "Map", "HashMap", "Set", "HashSet", "Iterator",
+                "Collections", "Arrays", "Thread", "Runnable", "Exception", "RuntimeException"
+            };
 
             // Проверяем простое имя класса
             if (standardClasses.Contains(className))
@@ -264,7 +264,10 @@ namespace LexerParserLibrary
         private readonly SymbolTable _symbolTable = new SymbolTable();
         private readonly List<SemanticException> _errors = new List<SemanticException>();
         private readonly Stack<int> _defaultLabelCounts = new Stack<int>();
+        private readonly List<SemanticException> _warnings = new List<SemanticException>();
 
+        public IEnumerable<SemanticException> Warnings => _warnings;
+        public bool HasWarnings => _warnings.Count > 0;
         public IEnumerable<SemanticException> Errors => _errors;
         public bool HasErrors => _errors.Count > 0;
 
@@ -608,6 +611,91 @@ namespace LexerParserLibrary
             int line = context.Start.Line;
             int column = context.Start.Column;
             _errors.Add(new SemanticException(message, line, column));
+        }
+
+        private void ReportWarning(string message, ParserRuleContext context)
+        {
+            int line = context.Start.Line;
+            int column = context.Start.Column;
+            _warnings.Add(new SemanticException(message, line, column));
+        }
+
+        public void GenerateReport(string outputPath = "semantic_report.json", string fileName = "unknown")
+        {
+            var report = new SemanticReport
+            {
+                FileName = fileName
+            };
+
+            // Добавляем ошибки в отчет
+            if (HasErrors)
+            {
+                foreach (var error in _errors)
+                {
+                    report.Errors.Add(new ReportItem
+                    {
+                        Line = error.Line,
+                        Column = error.Column,
+                        Message = error.Message,
+                        Severity = "Error"
+                    });
+                }
+            }
+
+            // Добавляем предупреждения в отчет
+            if (HasWarnings)
+            {
+                foreach (var warning in _warnings)
+                {
+                    report.Warnings.Add(new ReportItem
+                    {
+                        Line = warning.Line,
+                        Column = warning.Column,
+                        Message = warning.Message,
+                        Severity = "Warning"
+                    });
+                }
+            }
+
+            // Сохраняем отчет в JSON файл
+            try
+            {
+                string json = System.Text.Json.JsonSerializer.Serialize(report, new System.Text.Json.JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+
+                File.WriteAllText(outputPath, json);
+                Console.WriteLine($"Semantic analysis report saved to: {Path.GetFullPath(outputPath)}");
+
+                // Также выводим краткую сводку в консоль
+                Console.WriteLine("\n===== SEMANTIC ANALYSIS SUMMARY =====");
+                Console.WriteLine($"File: {fileName}");
+                Console.WriteLine($"Errors found: {report.Errors.Count}");
+                Console.WriteLine($"Warnings found: {report.Warnings.Count}");
+
+                if (report.Errors.Count > 0)
+                {
+                    Console.WriteLine("\nERRORS:");
+                    foreach (var error in report.Errors)
+                    {
+                        Console.WriteLine($"Line {error.Line}, Column {error.Column}: {error.Message}");
+                    }
+                }
+
+                if (report.Warnings.Count > 0)
+                {
+                    Console.WriteLine("\nWARNINGS:");
+                    foreach (var warning in report.Warnings)
+                    {
+                        Console.WriteLine($"Line {warning.Line}, Column {warning.Column}: {warning.Message}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to save semantic report: {ex.Message}");
+            }
         }
 
         // Анализ базовых типов
@@ -1972,6 +2060,284 @@ namespace LexerParserLibrary
                         }
                     }
                 }
+            }
+        }
+
+        // Анализ приведения типов (Type)expression
+        public override object VisitCastExpression(JavaGrammarParser.CastExpressionContext context)
+        {
+            // Получаем тип, к которому выполняется приведение
+            string castType = GetCastTypeName(context);
+            if (string.IsNullOrEmpty(castType))
+            {
+                ReportError("Invalid cast type", context);
+                return base.VisitCastExpression(context);
+            }
+
+            // Получаем выражение, которое приводится
+            var expression = context.expression();
+            if (expression == null)
+            {
+                ReportError("Missing expression in cast operation", context);
+                return base.VisitCastExpression(context);
+            }
+
+            string exprType = GetExpressionType(expression);
+
+            // Проверяем совместимость типов для приведения
+            if (!CanCastTypes(exprType, castType))
+            {
+                ReportError($"Cannot cast from {exprType} to {castType}", context);
+            }
+
+            // Дополнительные проверки для примитивных типов
+            if (IsPrimitiveType(castType) && IsPrimitiveType(exprType))
+            {
+                CheckPrimitiveCastCompatibility(exprType, castType, context);
+            }
+
+            return base.VisitCastExpression(context);
+        }
+
+        // Анализ выражений в скобках (expression)
+        public override object VisitParExpression(JavaGrammarParser.ParExpressionContext context)
+        {
+            // Просто посещаем вложенное выражение для семантической проверки
+            var expression = context.expression();
+            if (expression != null)
+            {
+                Visit(expression);
+            }
+
+            return base.VisitParExpression(context);
+        }
+
+        // Анализ литералов (числа, строки, булевы значения и т.д.)
+        public override object VisitLiteral(JavaGrammarParser.LiteralContext context)
+        {
+            string literalValue = context.GetText();
+            string literalType = GetLiteralType(context);
+
+            // Проверки для числовых литералов
+            if (IsNumericType(literalType))
+            {
+                CheckNumericLiteralRange(literalValue, literalType, context);
+            }
+
+            // Проверки для строковых литералов
+            if (literalType == "String")
+            {
+                CheckStringLiteral(literalValue, context);
+            }
+
+            // Проверки для символьных литералов
+            if (literalType == "char")
+            {
+                CheckCharLiteral(literalValue, context);
+            }
+
+            return base.VisitLiteral(context);
+        }
+
+        // Вспомогательные методы
+
+        private string GetCastTypeName(JavaGrammarParser.CastExpressionContext context)
+        {
+            if (context.type() != null)
+            {
+                return GetTypeName(context.type());
+            }
+            return null;
+        }
+
+        private bool CanCastTypes(string fromType, string toType)
+        {
+            if (fromType == null || toType == null) return false;
+
+            fromType = fromType.ToLower();
+            toType = toType.ToLower();
+
+            // Приведение к Object всегда допустимо
+            if (toType == "object") return true;
+
+            // Приведение к тому же типу всегда допустимо
+            if (fromType == toType) return true;
+
+            // Проверка для примитивных типов
+            if (IsPrimitiveType(fromType) && IsPrimitiveType(toType))
+            {
+                return IsCompatiblePrimitiveCast(fromType, toType);
+            }
+
+            // Проверка для ссылочных типов (упрощенная)
+            if (!IsPrimitiveType(fromType) && !IsPrimitiveType(toType))
+            {
+                // В реальном анализаторе здесь должна быть проверка иерархии наследования
+                return true; // Временно разрешаем все приведения для ссылочных типов
+            }
+
+            // Приведение примитива к ссылочному типу (автоматическая упаковка)
+            if (IsPrimitiveType(fromType) && !IsPrimitiveType(toType))
+            {
+                return GetWrapperType(fromType) == toType;
+            }
+
+            // Приведение ссылочного типа к примитиву (автоматическая распаковка)
+            if (!IsPrimitiveType(fromType) && IsPrimitiveType(toType))
+            {
+                return fromType == GetWrapperType(toType);
+            }
+
+            return false;
+        }
+
+        private void CheckPrimitiveCastCompatibility(string fromType, string toType, ParserRuleContext context)
+        {
+            fromType = fromType.ToLower();
+            toType = toType.ToLower();
+
+            // Проверка потери точности при приведении
+            if ((fromType == "double" || fromType == "float") &&
+                (toType == "int" || toType == "long" || toType == "short" || toType == "byte"))
+            {
+                ReportWarning($"Possible loss of precision casting from {fromType} to {toType}", context);
+            }
+
+            // Проверка приведения boolean к другим типам
+            if (fromType == "boolean" && toType != "boolean")
+            {
+                ReportError($"Cannot cast boolean to {toType}", context);
+            }
+
+            // Проверка приведения к boolean
+            if (toType == "boolean" && fromType != "boolean")
+            {
+                ReportError($"Cannot cast {fromType} to boolean", context);
+            }
+        }
+
+        private string GetLiteralType(JavaGrammarParser.LiteralContext context)
+        {
+            if (context.INTEGER_LITERAL() != null) return "int";
+            if (context.FLOATING_POINT_LITERAL() != null) return "double";
+            if (context.CHARACTER_LITERAL() != null) return "char";
+            if (context.STRING_LITERAL() != null) return "String";
+            if (context.TRUE() != null || context.FALSE() != null) return "boolean";
+            if (context.NULL() != null) return "null";
+            return "unknown";
+        }
+
+        private void CheckNumericLiteralRange(string value, string type, ParserRuleContext context)
+        {
+            try
+            {
+                // Удаляем суффиксы (l, L, f, F, d, D)
+                string cleanValue = value.TrimEnd('l', 'L', 'f', 'F', 'd', 'D');
+
+                switch (type)
+                {
+                    case "int":
+                        int.Parse(cleanValue);
+                        break;
+                    case "long":
+                        long.Parse(cleanValue);
+                        break;
+                    case "float":
+                        float.Parse(cleanValue);
+                        break;
+                    case "double":
+                        double.Parse(cleanValue);
+                        break;
+                }
+            }
+            catch (OverflowException)
+            {
+                ReportError($"Numeric literal out of range for type {type}: {value}", context);
+            }
+            catch (FormatException)
+            {
+                ReportError($"Invalid format for numeric literal of type {type}: {value}", context);
+            }
+        }
+
+        private void CheckStringLiteral(string value, ParserRuleContext context)
+        {
+            // Проверяем экранирование символов
+            if (value.Contains("\n") || value.Contains("\r"))
+            {
+                ReportError("String literals cannot contain unescaped newline characters", context);
+            }
+
+            // Проверяем закрывающую кавычку
+            if (!value.EndsWith("\""))
+            {
+                ReportError("Unclosed string literal", context);
+            }
+        }
+
+        private void CheckCharLiteral(string value, ParserRuleContext context)
+        {
+            // Проверяем формат символьного литерала
+            if (!value.StartsWith("'") || !value.EndsWith("'"))
+            {
+                ReportError("Invalid character literal format", context);
+                return;
+            }
+
+            string content = value.Substring(1, value.Length - 2);
+
+            // Допустимые длины: 1 символ или экранированная последовательность
+            if (content.Length != 1 && !content.StartsWith("\\"))
+            {
+                ReportError($"Invalid character literal: {value}. Must contain exactly one character.", context);
+            }
+        }
+
+        private bool IsPrimitiveType(string type)
+        {
+            if (type == null) return false;
+
+            type = type.ToLower();
+            return type == "int" || type == "long" || type == "float" || type == "double" ||
+                   type == "boolean" || type == "char" || type == "byte" || type == "short";
+        }
+
+        private bool IsCompatiblePrimitiveCast(string fromType, string toType)
+        {
+            // Матрица допустимых приведений для примитивных типов
+            var compatibleCasts = new Dictionary<string, string[]>
+            {
+                ["byte"] = new[] { "short", "int", "long", "float", "double" },
+                ["short"] = new[] { "int", "long", "float", "double" },
+                ["char"] = new[] { "int", "long", "float", "double" },
+                ["int"] = new[] { "long", "float", "double" },
+                ["long"] = new[] { "float", "double" },
+                ["float"] = new[] { "double" },
+                ["boolean"] = new string[0] // Нельзя приводить boolean к другим примитивам
+            };
+
+            if (compatibleCasts.TryGetValue(fromType, out var allowedTypes))
+            {
+                return allowedTypes.Contains(toType);
+            }
+
+            return false;
+        }
+
+        private string GetWrapperType(string primitiveType)
+        {
+            primitiveType = primitiveType.ToLower();
+            switch (primitiveType)
+            {
+                case "int": return "Integer";
+                case "long": return "Long";
+                case "float": return "Float";
+                case "double": return "Double";
+                case "boolean": return "Boolean";
+                case "char": return "Character";
+                case "byte": return "Byte";
+                case "short": return "Short";
+                default: return primitiveType;
             }
         }
     }
