@@ -355,10 +355,30 @@ namespace LexerParserLibrary.SemanticAnalyzer
             if (context is JavaGrammarParser.PrimaryExpressionContext primaryExpr)
             {
                 var expr1 = primaryExpr.expression1();
-                if (expr1 != null && expr1 is JavaGrammarParser.SimpleExpression2Context simpleExpr2)
+                if (expr1 != null)
                 {
-                    var expr2 = simpleExpr2.expression2();
-                    return GetExpression2Type(expr2);
+
+                    // Попробуем найти PostfixExpressionContext среди дочерних элементов expr1
+                    for (int i = 0; i < expr1.ChildCount; i++)
+                    {
+                        var child = expr1.GetChild(i);
+                        if (child is JavaGrammarParser.PostfixExpressionContext postfixExprAsChild)
+                        {
+                            // expr1 содержит PostfixExpressionContext как дочерний элемент
+                            // Передаем его в GetExpression2Type
+                            return GetExpression2Type(postfixExprAsChild); // Upcast до Expression2Context
+                        }
+                    }
+
+                    // Если не нашли PostfixExpression среди детей expr1, проверяем SimpleExpression2Context (например, для "x + y" или "func()")
+                    if (expr1 is JavaGrammarParser.SimpleExpression2Context simpleExpr2)
+                    {
+                        var expr2 = simpleExpr2.expression2();
+                        // Теперь вызываем вашу существующую реализацию GetExpression2Type
+                        return GetExpression2Type(expr2);
+                    }
+                    // Можно добавить другие возможные типы expr1, если нужно
+                    // else if (expr1 is JavaGrammarParser.InfixExpressionContext infixExpr) { ... }
                 }
             }
             return "unknown";
@@ -434,155 +454,11 @@ namespace LexerParserLibrary.SemanticAnalyzer
             }
             return null;
         }
-
-        // Анализ метода main
-        public override object VisitMethodDeclaratorRest(JavaGrammarParser.MethodDeclaratorRestContext context)
-{
-    // Проверяем, является ли это main методом
-    var parent = GetParentOfType<JavaGrammarParser.MethodOrFieldDeclContext>(context);
-    if (parent != null && parent.identifier() != null)
-    {
-        string methodName = parent.identifier().GetText();
-
-        if (methodName == "main")
-        {
-            // Проверяем, что это void метод
-            if (parent.type() != null && !IsVoidType(parent.type()))
-            {
-                ReportError("Main method must have void return type", context);
-            }
-
-            // Проверяем параметры (должны быть String[] args)
-            var formalParams = context.formalParameters();
-            if (formalParams != null)
-            {
-                var formalParamDecls = formalParams.formalParameterDecls();
-                if (formalParamDecls != null)
-                {
-                    // В данной грамматике FormalParameterDeclsContext представляет первый параметр.
-                    // Остальные параметры (если есть) находятся в formalParameterDeclsRest().
-                    // Нам нужно проверить, есть ли только один параметр.
-
-                    // Проверяем, есть ли первый параметр (в formalParameterDecls)
-                    bool hasFirstParam = formalParamDecls.type() != null && 
-                                         formalParamDecls.formalParameterDeclsRest() != null &&
-                                         formalParamDecls.formalParameterDeclsRest().variableDeclaratorId() != null;
-
-                    // Проверяем, есть ли дополнительные параметры (внутри formalParameterDeclsRest)
-                    bool hasAdditionalParams = formalParamDecls.formalParameterDeclsRest() != null &&
-                                               formalParamDecls.formalParameterDeclsRest().formalParameterDecls() != null;
-
-                    if (!hasFirstParam)
-                    {
-                        // Формально, если нет первого параметра, это ошибка
-                        ReportError("Main method must have exactly one parameter of type String[]", context);
-                        return base.VisitMethodDeclaratorRest(context);
-                    }
-
-                    if (hasAdditionalParams)
-                    {
-                        // Если есть дополнительные параметры, это ошибка для main
-                        ReportError("Main method must have exactly one parameter of type String[]", context);
-                        return base.VisitMethodDeclaratorRest(context);
-                    }
-
-                    // Если дошли сюда, значит есть только один параметр
-                    // Проверяем его тип и имя
-                    string paramType = GetTypeName(formalParamDecls.type());
-                    string paramName = formalParamDecls.formalParameterDeclsRest().variableDeclaratorId().GetText();
-
-                    // Проверяем, является ли это массив String
-                    // Для main метода параметр должен быть String[]
-                    // Проверка может быть базовой: тип содержит "String" и имя переменной оканчивается на "[]"
-                    // Более точная проверка может потребовать анализа dims (размерностей массива) в типе
-                    bool isValidType = paramType.Contains("String"); // Базовая проверка
-                    // Проверка массива может быть сложнее, но часто имя переменной указывает на массив
-                    bool isArray = paramName.EndsWith("[]");
-
-                    if (!isValidType || !isArray)
-                    {
-                        ReportError("Main method parameter must be of type String[]", context);
-                    }
-                }
-                else
-                {
-                    // Если formalParameterDecls отсутствует, значит параметров нет
-                    ReportError("Main method must have exactly one parameter of type String[]", context);
-                }
-            }
-            else
-            {
-                // Если formalParameters отсутствует, значит параметров нет
-                ReportError("Main method must have exactly one parameter of type String[]", context);
-            }
-
-            // Проверяем модификаторы (должны быть public static)
-            var memberDecl = GetParentOfType<JavaGrammarParser.MemberClassBodyDeclarationContext>(context);
-            if (memberDecl != null)
-            {
-                bool hasPublic = false, hasStatic = false;
-
-                foreach (var modifier in memberDecl.modifier())
-                {
-                    string modText = modifier.GetText();
-                    if (modText == "public") hasPublic = true;
-                    if (modText == "static") hasStatic = true;
-                }
-
-                if (!hasPublic || !hasStatic)
-                {
-                    ReportError("Main method must be public static", context);
-                }
-            }
-        }
-    }
-
-    return base.VisitMethodDeclaratorRest(context);
-}
-
-        // Вспомогательный метод для проверки void типа
-        private bool IsVoidType(JavaGrammarParser.TypeContext typeContext)
-        {
-            // Проверяем, является ли тип void
-            // В сгенерированной грамматике void представлен как BasicTypeType -> BasicType
-            if (typeContext is JavaGrammarParser.BasicTypeTypeContext basicTypeCtx)
-            {
-                var basicType = basicTypeCtx.basicType();
-                if (basicType != null)
-                {
-                    // В сгенерированной грамматике VOID представлен как метод VOID()
-                    // Проверяем, является ли текст "void"
-                    string typeText = basicType.GetText().Trim();
-                    if (typeText.Equals("void", StringComparison.OrdinalIgnoreCase))
-                    {
-                        return true;
-                    }
-                }
-            }
-            // Проверяем, может быть это ReferenceType с именем void
-            else if (typeContext is JavaGrammarParser.ReferenceTypeTypeContext refTypeCtx)
-            {
-                var refType = refTypeCtx.referenceType();
-                if (refType != null && refType.identifier().Length > 0)
-                {
-                    string typeName = refType.identifier()[0].GetText();
-                    return typeName.Equals("void", StringComparison.OrdinalIgnoreCase);
-                }
-            }
-
-            return false;
-        }
-
+        
         // Анализ классов
         public override object VisitClassDeclaration(JavaGrammarParser.ClassDeclarationContext context)
         {
             string className = context.identifier().GetText();
-
-            // Проверяем, что имя класса начинается с заглавной буквы
-            if (!char.IsUpper(className[0]))
-            {
-                ReportError($"Class name '{className}' should start with uppercase letter", context);
-            }
 
             // Проверяем, что в программе только один класс
             if (_symbolTable.IsDeclaredInCurrentScope("program_class"))
@@ -593,6 +469,9 @@ namespace LexerParserLibrary.SemanticAnalyzer
             {
                 _symbolTable.Declare("program_class", "class");
             }
+
+            // Добавляем класс в глобальную область видимости
+            _symbolTable.Declare(className, "class");
 
             // Проверяем модификаторы класса
             bool hasPublicModifier = false;
@@ -611,46 +490,8 @@ namespace LexerParserLibrary.SemanticAnalyzer
                 }
             }
 
-            // Проверяем наличие метода main в классе
-            bool hasMainMethod = false;
-            var classBody = context.classBody();
-            if (classBody != null)
-            {
-                foreach (var declaration in classBody.classBodyDeclaration())
-                {
-                    // Проверяем, является ли объявление MemberClassBodyDeclarationContext
-                    if (declaration is JavaGrammarParser.MemberClassBodyDeclarationContext memberDeclContext)
-                    {
-                        // Теперь можно безопасно вызвать memberDecl()
-                        var memberDecl = memberDeclContext.memberDecl();
-                        if (memberDecl != null)
-                        {
-                            // Проверяем void-методы
-                            if (memberDecl is JavaGrammarParser.VoidMethodMemberContext voidMethod)
-                            {
-                                if (voidMethod.identifier().GetText() == "main")
-                                {
-                                    hasMainMethod = true;
-                                }
-                            }
-                            // Проверяем методы с возвращаемым типом
-                            else if (memberDecl is JavaGrammarParser.FieldOrMethodMemberContext fieldOrMethod)
-                            {
-                                if (fieldOrMethod.methodOrFieldDecl() != null &&
-                                    fieldOrMethod.methodOrFieldDecl().identifier().GetText() == "main")
-                                {
-                                    hasMainMethod = true;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (!hasMainMethod)
-            {
-                ReportError("Class must contain a 'main' method", context);
-            }
+            // НЕ проверяем наличие метода main здесь.
+            // Это делает VisitVoidMethodDeclaratorRest или другой метод, специально предназначенный для этой проверки.
 
             // Входим в область видимости класса
             _symbolTable.EnterScope(className);
@@ -662,6 +503,104 @@ namespace LexerParserLibrary.SemanticAnalyzer
             _symbolTable.ExitScope();
 
             return result;
+        }
+
+        // Анализ метода main
+        public override object VisitVoidMethodDeclaratorRest(JavaGrammarParser.VoidMethodDeclaratorRestContext context)
+        {
+            // Проверяем, является ли это main методом
+            var memberDeclContext = GetParentOfType<JavaGrammarParser.VoidMethodMemberContext>(context);
+            if (memberDeclContext != null && memberDeclContext.identifier() != null)
+            {
+                string methodName = memberDeclContext.identifier().GetText();
+
+                if (methodName == "main")
+                {
+                    // Проверяем параметры (должны быть String[] args)
+                    var formalParams = context.formalParameters();
+                    if (formalParams != null)
+                    {
+                        var formalParamDecls = formalParams.formalParameterDecls();
+                        if (formalParamDecls != null)
+                        {
+                            // --- ИСПРАВЛЕНИЕ ---
+                            // Получаем базовый тип параметра (например, "String")
+                            string baseParamType = GetTypeName(formalParamDecls.type());
+
+                            // Проверяем, является ли базовый тип "String"
+                            bool isStringType = baseParamType.Trim().Equals("String", StringComparison.OrdinalIgnoreCase) ||
+                                               baseParamType.Trim().Equals("java.lang.String", StringComparison.OrdinalIgnoreCase);
+
+                            // Проверяем, что параметр является массивом (имеет размерности [])
+                            // LBRACK/RBRACK находятся в том же контексте, что и базовый тип (ReferenceTypeTypeContext или BasicTypeTypeContext)
+                            // Проверим, есть ли LBRACK в formalParamDecls.type()
+                            bool isArray = false;
+                            var typeCtx = formalParamDecls.type();
+                            if (typeCtx is JavaGrammarParser.ReferenceTypeTypeContext refTypeCtx)
+                            {
+                                // LBRACK может быть в ReferenceTypeTypeContext
+                                isArray = refTypeCtx.LBRACK() != null && refTypeCtx.LBRACK().Length > 0;
+                            }
+                            // Если typeCtx - BasicTypeTypeContext, проверка LBRACK там невозможна, так как BasicType не может быть массивом напрямую.
+                            // else if (typeCtx is JavaGrammarParser.BasicTypeTypeContext basicTypeCtx)
+                            // {
+                            //     isArray = basicTypeCtx.LBRACK() != null && basicTypeCtx.LBRACK().Length > 0;
+                            //     // Это маловероятно, так как int[] не может быть параметром main.
+                            // }
+
+                            // Проверяем, что базовый тип String И массивность есть
+                            if (!isStringType || !isArray)
+                            {
+                                ReportError("Main method parameter must be of type String[]", context);
+                            }
+                            // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
+
+                            // Проверяем имя параметра (необязательно для семантики, но можно проверить стилю)
+                            var paramRest = formalParamDecls.formalParameterDeclsRest();
+                            if (paramRest != null && paramRest.variableDeclaratorId() != null)
+                            {
+                                string paramName = paramRest.variableDeclaratorId().identifier().GetText();
+                                // Например, можно проверить, что имя не начинается с заглавной буквы
+                                if (char.IsUpper(paramName.FirstOrDefault()))
+                                {
+                                    ReportWarning($"Parameter name '{paramName}' should start with lowercase letter", paramRest.variableDeclaratorId());
+                                }
+                            }
+                        }
+                        else
+                        {
+                            // formalParamDecls == null -> значит, параметров нет (public static void main())
+                            ReportError("Main method must have exactly one parameter of type String[]", context);
+                        }
+                    }
+                    else
+                    {
+                        // formalParameters == null -> значит, параметров нет (public static void main())
+                        ReportError("Main method must have exactly one parameter of type String[]", context);
+                    }
+
+                    // Проверяем модификаторы (должны быть public static)
+                    var memberClassBodyDecl = GetParentOfType<JavaGrammarParser.MemberClassBodyDeclarationContext>(context);
+                    if (memberClassBodyDecl != null)
+                    {
+                        bool hasPublic = false, hasStatic = false;
+                        foreach (var modifier in memberClassBodyDecl.modifier())
+                        {
+                            string modText = modifier.GetText();
+                            if (modText == "public") hasPublic = true;
+                            if (modText == "static") hasStatic = true;
+                        }
+
+                        if (!hasPublic || !hasStatic)
+                        {
+                            ReportError("Main method must be public static", context);
+                        }
+                    }
+                }
+            }
+
+            // Продолжаем обход детей этого узла
+            return base.VisitVoidMethodDeclaratorRest(context);
         }
 
         private void ReportWarning(string message, ParserRuleContext context)
