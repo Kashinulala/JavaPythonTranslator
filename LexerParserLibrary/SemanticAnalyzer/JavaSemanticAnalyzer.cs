@@ -696,7 +696,18 @@ namespace LexerParserLibrary.SemanticAnalyzer
                         }
                     }
                 }
-                // Можно добавить другие типы primary, если нужно
+                else if (primary is JavaGrammarParser.ParenthesizedPrimaryContext parenthPrimary)
+                {
+                    var parExpr = parenthPrimary.parExpression();
+                    if (parExpr != null)
+                    {
+                        var innerExpr = parExpr.expression(); // Это x < y
+                        if (innerExpr != null)
+                        {
+                            primaryType = GetExpressionType(innerExpr); // Рекурсивный вызов для анализа x < y
+                        }
+                    }
+                }
 
                 // Теперь проверяем postfixOp (инкремент/декремент)
                 var postfixOp = postfixExpr.postfixOp();
