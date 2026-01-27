@@ -407,23 +407,17 @@ public interface IJavaGrammarVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitForVarControl([NotNull] JavaGrammarParser.ForVarControlContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="JavaGrammarParser.forVarControlRest"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitForVarControlRest([NotNull] JavaGrammarParser.ForVarControlRestContext context);
-	/// <summary>
-	/// Visit a parse tree produced by <see cref="JavaGrammarParser.forVariableDeclaratorsRest"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	/// <return>The visitor result.</return>
-	Result VisitForVariableDeclaratorsRest([NotNull] JavaGrammarParser.ForVariableDeclaratorsRestContext context);
-	/// <summary>
 	/// Visit a parse tree produced by <see cref="JavaGrammarParser.forInit"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
 	Result VisitForInit([NotNull] JavaGrammarParser.ForInitContext context);
+	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.forDeclarationContext"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitForDeclarationContext([NotNull] JavaGrammarParser.ForDeclarationContextContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="JavaGrammarParser.forUpdate"/>.
 	/// </summary>

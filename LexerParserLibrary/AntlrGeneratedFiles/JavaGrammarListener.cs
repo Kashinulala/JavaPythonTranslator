@@ -665,26 +665,6 @@ public interface IJavaGrammarListener : IParseTreeListener {
 	/// <param name="context">The parse tree.</param>
 	void ExitForVarControl([NotNull] JavaGrammarParser.ForVarControlContext context);
 	/// <summary>
-	/// Enter a parse tree produced by <see cref="JavaGrammarParser.forVarControlRest"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	void EnterForVarControlRest([NotNull] JavaGrammarParser.ForVarControlRestContext context);
-	/// <summary>
-	/// Exit a parse tree produced by <see cref="JavaGrammarParser.forVarControlRest"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	void ExitForVarControlRest([NotNull] JavaGrammarParser.ForVarControlRestContext context);
-	/// <summary>
-	/// Enter a parse tree produced by <see cref="JavaGrammarParser.forVariableDeclaratorsRest"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	void EnterForVariableDeclaratorsRest([NotNull] JavaGrammarParser.ForVariableDeclaratorsRestContext context);
-	/// <summary>
-	/// Exit a parse tree produced by <see cref="JavaGrammarParser.forVariableDeclaratorsRest"/>.
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	void ExitForVariableDeclaratorsRest([NotNull] JavaGrammarParser.ForVariableDeclaratorsRestContext context);
-	/// <summary>
 	/// Enter a parse tree produced by <see cref="JavaGrammarParser.forInit"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
@@ -694,6 +674,16 @@ public interface IJavaGrammarListener : IParseTreeListener {
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	void ExitForInit([NotNull] JavaGrammarParser.ForInitContext context);
+	/// <summary>
+	/// Enter a parse tree produced by <see cref="JavaGrammarParser.forDeclarationContext"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterForDeclarationContext([NotNull] JavaGrammarParser.ForDeclarationContextContext context);
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="JavaGrammarParser.forDeclarationContext"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitForDeclarationContext([NotNull] JavaGrammarParser.ForDeclarationContextContext context);
 	/// <summary>
 	/// Enter a parse tree produced by <see cref="JavaGrammarParser.forUpdate"/>.
 	/// </summary>

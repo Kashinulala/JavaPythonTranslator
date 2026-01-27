@@ -786,30 +786,6 @@ public partial class JavaGrammarBaseListener : IJavaGrammarListener {
 	/// <param name="context">The parse tree.</param>
 	public virtual void ExitForVarControl([NotNull] JavaGrammarParser.ForVarControlContext context) { }
 	/// <summary>
-	/// Enter a parse tree produced by <see cref="JavaGrammarParser.forVarControlRest"/>.
-	/// <para>The default implementation does nothing.</para>
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	public virtual void EnterForVarControlRest([NotNull] JavaGrammarParser.ForVarControlRestContext context) { }
-	/// <summary>
-	/// Exit a parse tree produced by <see cref="JavaGrammarParser.forVarControlRest"/>.
-	/// <para>The default implementation does nothing.</para>
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	public virtual void ExitForVarControlRest([NotNull] JavaGrammarParser.ForVarControlRestContext context) { }
-	/// <summary>
-	/// Enter a parse tree produced by <see cref="JavaGrammarParser.forVariableDeclaratorsRest"/>.
-	/// <para>The default implementation does nothing.</para>
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	public virtual void EnterForVariableDeclaratorsRest([NotNull] JavaGrammarParser.ForVariableDeclaratorsRestContext context) { }
-	/// <summary>
-	/// Exit a parse tree produced by <see cref="JavaGrammarParser.forVariableDeclaratorsRest"/>.
-	/// <para>The default implementation does nothing.</para>
-	/// </summary>
-	/// <param name="context">The parse tree.</param>
-	public virtual void ExitForVariableDeclaratorsRest([NotNull] JavaGrammarParser.ForVariableDeclaratorsRestContext context) { }
-	/// <summary>
 	/// Enter a parse tree produced by <see cref="JavaGrammarParser.forInit"/>.
 	/// <para>The default implementation does nothing.</para>
 	/// </summary>
@@ -821,6 +797,18 @@ public partial class JavaGrammarBaseListener : IJavaGrammarListener {
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	public virtual void ExitForInit([NotNull] JavaGrammarParser.ForInitContext context) { }
+	/// <summary>
+	/// Enter a parse tree produced by <see cref="JavaGrammarParser.forDeclarationContext"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void EnterForDeclarationContext([NotNull] JavaGrammarParser.ForDeclarationContextContext context) { }
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="JavaGrammarParser.forDeclarationContext"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void ExitForDeclarationContext([NotNull] JavaGrammarParser.ForDeclarationContextContext context) { }
 	/// <summary>
 	/// Enter a parse tree produced by <see cref="JavaGrammarParser.forUpdate"/>.
 	/// <para>The default implementation does nothing.</para>

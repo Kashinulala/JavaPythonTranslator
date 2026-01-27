@@ -27,13 +27,26 @@ namespace LexerParserLibrary.SemanticAnalyzer
             // Обработка локальных переменных
             if (parentCtx is JavaGrammarParser.VariableDeclaratorsContext varDecls)
             {
-                var localVarDecl = GetParentOfType<JavaGrammarParser.LocalVariableDeclarationStatementContext>(varDecls);
-                if (localVarDecl != null)
+                // Проверяем, является ли родитель LocalVariableDeclarationStatementContext (обычный случай: int x = 10;)
+                var localVarDeclStmt = GetParentOfType<JavaGrammarParser.LocalVariableDeclarationStatementContext>(varDecls);
+                if (localVarDeclStmt != null)
                 {
-                    varType = GetTypeName(localVarDecl.type());
+                    varType = GetTypeName(localVarDeclStmt.type());
+                }
+                // Если нет, проверяем, является ли родитель LocalVariableDeclarationContext (для forInit: int i = 0)
+                else
+                {
+                    var localVarDecl = GetParentOfType<JavaGrammarParser.ForDeclarationContextContext>(varDecls);
+                    if (localVarDecl != null)
+                    {
+                        varType = GetTypeName(localVarDecl.type());
+                    }
+                    // Если и LocalVariableDeclarationContext не найден, оставляем varType = "unknown"
+                    // или можно добавить логирование для отладки
+                    // else { /* Возможно, ошибка в грамматике или дереве */ }
                 }
             }
-            // Обработка полей класса
+            // Обработка полей класса (оставляем как есть)
             else if (parentCtx is JavaGrammarParser.FieldDeclaratorsRestContext fieldRest)
             {
                 var fieldParent = fieldRest.Parent as JavaGrammarParser.MethodOrFieldRestContext;
@@ -862,7 +875,20 @@ namespace LexerParserLibrary.SemanticAnalyzer
                 // Анализируем управление циклом
                 if (context.forControl() != null)
                 {
-                    Visit(context.forControl());
+                    // Явно проверяем тип forControl и вызываем соответствующий метод
+                    if (context.forControl() is JavaGrammarParser.EnhancedForControlContext enhancedForCtrl)
+                    {
+                        VisitEnhancedForControl(enhancedForCtrl);
+                    }
+                    else if (context.forControl() is JavaGrammarParser.TraditionalForControlContext traditionalForCtrl)
+                    {
+                        VisitTraditionalForControl(traditionalForCtrl);
+                    }
+                    else
+                    {
+                        // Неизвестный тип цикла
+                        ReportError("Unknown for loop control structure", context.forControl());
+                    }
                 }
 
                 // Анализируем тело цикла
@@ -885,7 +911,7 @@ namespace LexerParserLibrary.SemanticAnalyzer
             // Проверка инициализации
             if (context.forInit() != null)
             {
-                Visit(context.forInit());
+                Visit(context.forInit()); // <-- Это вызовет VisitVariableDeclarator
             }
 
             // Проверка условия цикла
@@ -903,7 +929,6 @@ namespace LexerParserLibrary.SemanticAnalyzer
             {
                 foreach (var stmtExpr in context.forUpdate().statementExpression())
                 {
-                    // statementExpression может содержать выражение присваивания, вызов метода и т.д.
                     var expression = stmtExpr.expression();
                     if (expression != null)
                     {
@@ -916,7 +941,7 @@ namespace LexerParserLibrary.SemanticAnalyzer
                 }
             }
 
-            return base.VisitTraditionalForControl(context);
+            return null;
         }
 
         public override object VisitEnhancedForControl(JavaGrammarParser.EnhancedForControlContext context)
