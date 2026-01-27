@@ -326,61 +326,111 @@ namespace LexerParserLibrary.SemanticAnalyzer
             return base.VisitNewCreatorPrimary(context);
         }
 
-        private string GetExpression2Type(JavaGrammarParser.Expression2Context context)
-        {
-            if (context is JavaGrammarParser.PostfixExpressionContext postfixExpr)
-            {
-                var primary = postfixExpr.primary();
-                if (primary is JavaGrammarParser.LiteralPrimaryContext literalPrimary)
-                {
-                    var literal = literalPrimary.literal();
-                    if (literal.INTEGER_LITERAL() != null) return "int";
-                    if (literal.FLOATING_POINT_LITERAL() != null) return "double";
-                    if (literal.STRING_LITERAL() != null) return "String";
-                    if (literal.TRUE() != null || literal.FALSE() != null) return "boolean";
-                }
-                else if (primary is JavaGrammarParser.IdentifierPrimaryContext idPrimary &&
-                         idPrimary.identifier().Length > 0)
-                {
-                    string varName = idPrimary.identifier()[0].GetText();
-                    var symbol = _symbolTable.GetSymbol(varName);
-                    return symbol?.Type ?? "unknown";
-                }
-            }
-            return "unknown";
-        }
-
         private string GetExpressionType(JavaGrammarParser.ExpressionContext context)
         {
-            if (context is JavaGrammarParser.PrimaryExpressionContext primaryExpr)
+            if (context == null) return "unknown";
+
+            // ExpressionContext может быть AssignmentExpressionContext или PrimaryExpressionContext
+            if (context is JavaGrammarParser.AssignmentExpressionContext assignmentExpr)
+            {
+                // Тип присваивания - тип правой части (последнего выражения в списке, если их несколько)
+                var expressions = assignmentExpr.expression();
+                if (expressions != null && expressions.Length > 0)
+                {
+                    // Правая часть присваивания - это последний элемент в массиве expression()
+                    // assignmentExpr.expression(0) - левая часть
+                    // assignmentExpr.expression(1) - правая часть (для ASSIGN)
+                    if (expressions.Length >= 2)
+                    {
+                        return GetExpressionType(expressions[expressions.Length - 1]);
+                    }
+                    else if (expressions.Length == 1)
+                    {
+                        // Это может быть случай, если выражение только одно (например, вложенный вызов)
+                        // Но для ASSIGN всегда должно быть 2: лево = право
+                        // Если пришло только одно выражение, возможно, это не ASSIGN, а просто PrimaryExpression
+                        // Это маловероятно для AssignmentExpression, но на всякий случай:
+                        return GetExpressionType(expressions[0]);
+                    }
+                }
+                return "unknown";
+            }
+            // Проверяем PrimaryExpression (это основной случай для выражений, не являющихся присваиванием)
+            else if (context is JavaGrammarParser.PrimaryExpressionContext primaryExpr)
             {
                 var expr1 = primaryExpr.expression1();
                 if (expr1 != null)
                 {
-
-                    // Попробуем найти PostfixExpressionContext среди дочерних элементов expr1
-                    for (int i = 0; i < expr1.ChildCount; i++)
-                    {
-                        var child = expr1.GetChild(i);
-                        if (child is JavaGrammarParser.PostfixExpressionContext postfixExprAsChild)
-                        {
-                            // expr1 содержит PostfixExpressionContext как дочерний элемент
-                            // Передаем его в GetExpression2Type
-                            return GetExpression2Type(postfixExprAsChild); // Upcast до Expression2Context
-                        }
-                    }
-
-                    // Если не нашли PostfixExpression среди детей expr1, проверяем SimpleExpression2Context (например, для "x + y" или "func()")
-                    if (expr1 is JavaGrammarParser.SimpleExpression2Context simpleExpr2)
-                    {
-                        var expr2 = simpleExpr2.expression2();
-                        // Теперь вызываем вашу существующую реализацию GetExpression2Type
-                        return GetExpression2Type(expr2);
-                    }
-                    // Можно добавить другие возможные типы expr1, если нужно
-                    // else if (expr1 is JavaGrammarParser.InfixExpressionContext infixExpr) { ... }
+                    return GetExpression1Type(expr1);
                 }
             }
+
+            return "unknown";
+        }
+
+        private string GetExpression1Type(JavaGrammarParser.Expression1Context expr1)
+        {
+            if (expr1 == null) return "unknown";
+
+            // Expression1 может быть InfixExpressionContext или SimpleExpression2Context
+            // Проверяем, является ли выражение1 инфиксным (операции)
+            if (expr1 is JavaGrammarParser.InfixExpressionContext infixExpr)
+            {
+                // Дополнительная проверка: если нет операторов, это может быть просто SimpleExpression2
+                var operators = infixExpr.infixOp();
+                if (operators != null && operators.Length > 0)
+                {
+                    // Есть хотя бы один оператор - действительно инфиксное выражение
+                    return GetInfixExpressionType(infixExpr);
+                }
+                else
+                {
+                    // Нет операторов - это скорее всего просто expression2
+                    // Проверим, есть ли хотя бы один expression2
+                    var operands = infixExpr.expression2();
+                    if (operands != null && operands.Length == 1)
+                    {
+                        // Это может быть эквивалент SimpleExpression2 -> expression2
+                        // Вызовем GetExpression2Type для этого единственного выражения
+                        return GetExpression2Type(operands[0]);
+                    }
+                    // Если operands.Length != 1, это странная ситуация
+                }
+            }
+            // Проверяем, является ли выражение1 простым выражением2 (обычно первичное выражение или унарные/постфиксные операции)
+            else if (expr1 is JavaGrammarParser.SimpleExpression2Context simpleExpr2)
+            {
+                var expr2 = simpleExpr2.expression2();
+                if (expr2 != null)
+                {
+                    // Теперь expr2 может быть PrefixExpression, PostfixExpression или другими
+                    // Вызываем GetExpression2Type для обработки expr2
+                    return GetExpression2Type(expr2);
+                }
+            }
+
+            return "unknown";
+        }
+
+        private string GetExpression2Type(JavaGrammarParser.Expression2Context context)
+        {
+            // Expression2 может быть:
+            // 1. PostfixExpressionContext (с primary внутри)
+            // 2. PrefixExpressionContext (с primary внутри)
+            // Проверяем PostfixExpressionContext - это основной случай для Expression2
+            if (context is JavaGrammarParser.PostfixExpressionContext postfixExpr)
+            {
+                // Вызываем отдельный метод для обработки PostfixExpression
+                // Этот метод должен содержать всю логику для PostfixExpression, включая primary, selector, postfixOp
+                return GetPostfixExpressionType(postfixExpr);
+            }
+            // Проверяем PrefixExpressionContext
+            else if (context is JavaGrammarParser.PrefixExpressionContext prefixExpr)
+            {
+                return GetPrefixExpressionType(prefixExpr);
+            }
+
+            // Если ни одно из условий не сработало, возвращаем unknown
             return "unknown";
         }
 
@@ -407,6 +457,190 @@ namespace LexerParserLibrary.SemanticAnalyzer
             return "unknown";
         }
 
+        private string GetInfixExpressionType(JavaGrammarParser.InfixExpressionContext infixExpr)
+        {
+            if (infixExpr == null) return "unknown";
+
+            var operators = infixExpr.infixOp();
+            var operands = infixExpr.expression2();
+
+            if (operators.Length > 0 && operands.Length >= 2)
+            {
+                var op = operators[0].GetText();
+
+                // Операторы сравнения - результат boolean
+                if (new[] { "<", ">", "<=", ">=", "==", "!=", "&&", "||" }.Contains(op))
+                {
+                    return "boolean";
+                }
+                // Арифметические операции
+                else if (new[] { "+", "-", "*", "/", "%" }.Contains(op))
+                {
+                    // Определяем тип результата арифметической операции
+                    string leftType = GetExpression2Type(operands[0]);
+                    string rightType = GetExpression2Type(operands[1]);
+
+                    return GetArithmeticResultType(leftType, rightType);
+                }
+                // Операторы присваивания
+                else if (new[] { "=", "+=", "-=", "*=", "/=", "%=" }.Contains(op))
+                {
+                    // Тип результата присваивания - тип правой части
+                    if (operands.Length > 1)
+                    {
+                        return GetExpression2Type(operands[1]);
+                    }
+                }
+            }
+
+            return "unknown";
+        }
+
+        private string GetPrefixExpressionType(JavaGrammarParser.PrefixExpressionContext prefixExpr)
+        {
+            if (prefixExpr == null) return "unknown";
+
+            var prefixOp = prefixExpr.prefixOp();
+            var innerExpr2 = prefixExpr.expression2(); // Это внутреннее выражение
+
+            if (prefixOp != null && innerExpr2 != null)
+            {
+                string op = prefixOp.GetText();
+                // ВАЖНО: Вызываем GetExpression2Type для внутреннего выражения
+                // Это может привести к рекурсии, но она должна завершиться
+                string operandType = GetExpression2Type(innerExpr2);
+
+                // Логическое отрицание
+                if (op == "!")
+                {
+                    if (operandType == "boolean")
+                    {
+                        return "boolean";
+                    }
+                    else
+                    {
+                        ReportError($"Operator '!' requires boolean operand, found: {operandType}", prefixExpr);
+                        return "unknown";
+                    }
+                }
+                // Унарные арифметические операции
+                else if (op == "+" || op == "-")
+                {
+                    if (IsNumericType(operandType))
+                    {
+                        return operandType; // Тип результата совпадает с типом операнда
+                    }
+                    else
+                    {
+                        ReportError($"Unary operator '{op}' requires numeric operand, found: {operandType}", prefixExpr);
+                        return "unknown";
+                    }
+                }
+            }
+            else if (prefixOp != null && innerExpr2 == null)
+            {
+                // Это может быть ошибка в грамматике или дереве разбора
+                ReportError("Prefix operator without operand", prefixExpr);
+            }
+
+            return "unknown";
+        }
+
+        private string GetPostfixExpressionType(JavaGrammarParser.PostfixExpressionContext postfixExpr)
+        {
+            if (postfixExpr == null) return "unknown";
+
+            var primary = postfixExpr.primary();
+            if (primary != null)
+            {
+                // Определяем тип первичного выражения
+                string primaryType = "unknown";
+
+                if (primary is JavaGrammarParser.LiteralPrimaryContext literalPrimary)
+                {
+                    var literal = literalPrimary.literal();
+                    if (literal != null)
+                    {
+                        if (literal.INTEGER_LITERAL() != null) primaryType = "int";
+                        else if (literal.FLOATING_POINT_LITERAL() != null) primaryType = "double";
+                        else if (literal.STRING_LITERAL() != null) primaryType = "String";
+                        else if (literal.TRUE() != null || literal.FALSE() != null) primaryType = "boolean";
+                        else if (literal.CHARACTER_LITERAL() != null) primaryType = "char";
+                        else if (literal.NULL() != null) primaryType = "null";
+                    }
+                }
+                else if (primary is JavaGrammarParser.IdentifierPrimaryContext idPrimary)
+                {
+                    if (idPrimary.identifier().Length > 0)
+                    {
+                        string varName = idPrimary.identifier()[0].GetText();
+                        var symbol = _symbolTable.GetSymbol(varName);
+                        primaryType = symbol?.Type ?? "unknown";
+                    }
+                }
+                else if (primary is JavaGrammarParser.NewCreatorPrimaryContext newCreatorPrimary)
+                {
+                    var creator = newCreatorPrimary.creator();
+                    if (creator != null && creator.createdName() != null)
+                    {
+                        var createdName = creator.createdName();
+                        if (createdName.identifier().Length > 0)
+                        {
+                            primaryType = createdName.identifier()[0].GetText();
+                        }
+                    }
+                }
+                // Можно добавить другие типы primary, если нужно
+
+                // Теперь проверяем postfixOp (инкремент/декремент)
+                var postfixOp = postfixExpr.postfixOp();
+                if (postfixOp != null)
+                {
+                    // Для инкремента/декремента результат - это тип переменной
+                    if (postfixOp.INC() != null || postfixOp.DEC() != null)
+                    {
+                        if (IsNumericType(primaryType))
+                        {
+                            return primaryType; // Тип результата инкремента/декремента
+                        }
+                        else
+                        {
+                            ReportError($"Increment/decrement operators require numeric operand, found: {primaryType}", postfixExpr);
+                            return "unknown";
+                        }
+                    }
+                }
+                // Проверяем selector (например, вызовы методов, доступ к полям, доступ к массивам)
+                if (postfixExpr.selector() != null && postfixExpr.selector().Length > 0)
+                {
+                    // Пока возвращаем тип первичного выражения, хотя в реальности он может измениться
+                    // в зависимости от вызываемого метода/поля
+                    // Для простых случаев (без вызова методов) возвращаем тип primary
+                    return primaryType;
+                }
+
+                // --- КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: Возвращаем тип первичного выражения ---
+                return primaryType;
+            }
+
+            return "unknown";
+        }
+
+        private string GetArithmeticResultType(string leftType, string rightType)
+        {
+            if (leftType == "double" || rightType == "double")
+                return "double";
+            else if (leftType == "float" || rightType == "float")
+                return "float";
+            else if (leftType == "long" || rightType == "long")
+                return "long";
+            else if (IsNumericType(leftType) && IsNumericType(rightType))
+                return "int";
+            else
+                return "unknown";
+        }
+
+
         private bool IsNumericType(string type)
         {
             if (type == null) return false;
@@ -416,16 +650,21 @@ namespace LexerParserLibrary.SemanticAnalyzer
 
         private bool AreTypesCompatible(string type1, string type2)
         {
-            if (string.IsNullOrEmpty(type1) || string.IsNullOrEmpty(type2))
-                return false;
+            if (type1 == null || type2 == null) return false;
+            if (type1 == type2) return true;
 
-            // Позволяем приведение от Object к любому типу (для for-each)
-            if (type1.Equals("object", StringComparison.OrdinalIgnoreCase))
-                return true;
+            // Проверка числовых типов
+            if (IsNumericType(type1) && IsNumericType(type2))
+            {
+                // Позволяем приведение от меньшего к большему
+                var numericOrder = new[] { "byte", "short", "int", "long", "float", "double" };
+                int idx1 = Array.IndexOf(numericOrder, type1.ToLower());
+                int idx2 = Array.IndexOf(numericOrder, type2.ToLower());
+                return idx1 >= 0 && idx2 >= 0 && Math.Max(idx1, idx2) <= Math.Max(idx1, idx2);
+            }
 
-            // Проводим базовую проверку совместимости
-            return type1.Equals(type2, StringComparison.OrdinalIgnoreCase) ||
-                   IsNumericType(type1) && IsNumericType(type2);
+            // Проверка для коллекций
+            return IsCollectionType(type1) && IsCollectionType(type2);
         }
 
         private bool IsValidSwitchType(string type)
