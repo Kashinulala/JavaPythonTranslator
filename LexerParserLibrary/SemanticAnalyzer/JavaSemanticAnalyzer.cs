@@ -103,6 +103,40 @@ namespace LexerParserLibrary.SemanticAnalyzer
             return null;
         }
 
+        // Переопределите VisitPrimaryExpression
+        public override object VisitPrimaryExpression(JavaGrammarParser.PrimaryExpressionContext context)
+        {
+            // PrimaryExpressionContext содержит expression1()
+            // Мы должны вызвать GetExpression1Type для этого expression1
+            var expr1 = context.expression1();
+            if (expr1 != null)
+            {
+                string exprType = GetExpression1Type(expr1);
+                // Возвращаем тип выражения
+                return exprType;
+            }
+
+            // Если expression1 отсутствует, возвращаем unknown
+            return "unknown";
+        }
+
+        // Переопределите VisitSimpleExpression2
+        public override object VisitSimpleExpression2(JavaGrammarParser.SimpleExpression2Context context)
+        {
+            // SimpleExpression2Context содержит expression2()
+            // Мы должны вызвать GetExpression2Type для этого expression2
+            var expr2 = context.expression2();
+            if (expr2 != null)
+            {
+                string exprType = GetExpression2Type(expr2);
+                // Возвращаем тип выражения
+                return exprType;
+            }
+
+            // Если expression2 отсутствует, возвращаем unknown
+            return "unknown";
+        }
+
         // Анализ выражений присваивания
         public override object VisitAssignmentExpression(JavaGrammarParser.AssignmentExpressionContext context)
         {
@@ -477,63 +511,95 @@ namespace LexerParserLibrary.SemanticAnalyzer
             var operators = infixExpr.infixOp();
             var operands = infixExpr.expression2();
 
-            if (operators.Length > 0 && operands.Length >= 2)
+            // Проверяем, есть ли хотя бы один оператор и два операнда
+            if (operators.Length == 0 || operands.Length < 2)
             {
-                var op = operators[0].GetText();
+                // Это странная ситуация, возможно, выражение вроде "x"
+                // Но это не InfixExpression, если нет операторов.
+                // Если длина operands > 1, а операторов нет, это ошибка грамматики.
+                if (operands.Length == 1)
+                {
+                    // Это может быть не InfixExpression вовсе, а SimpleExpression2 или что-то другое.
+                    // Хотя грамматика выражает это как InfixExpression даже с 1 операндом и 0 операторов.
+                    // В этом случае, просто возвращаем тип первого операнда.
+                    return GetExpression2Type(operands[0]);
+                }
+                return "unknown";
+            }
 
-                // Операторы сравнения - результат boolean
+            // Начинаем с левого операнда
+            string resultType = GetExpression2Type(operands[0]);
+
+            // Проверяем каждый оператор и соответствующий правый операнд
+            for (int i = 0; i < operators.Length; i++)
+            {
+                if (i + 1 >= operands.Length)
+                {
+                    // Ошибка: оператор без соответствующего правого операнда
+                    ReportError("Infix expression has operator without right operand", infixExpr);
+                    return "unknown";
+                }
+
+                var op = operators[i].GetText();
+                string rightOperandType = GetExpression2Type(operands[i + 1]);
+
+                // Проверяем, совместимы ли типы для данного оператора
+                // Операторы сравнения
                 if (new[] { "<", ">", "<=", ">=", "==", "!=", "&&", "||" }.Contains(op))
                 {
-                    string leftType = GetExpression2Type(operands[0]);
-                    string rightType = GetExpression2Type(operands[1]);
-
                     // Проверяем, являются ли оба операнда числовыми для числовых операторов сравнения
                     if (new[] { "<", ">", "<=", ">=", "==", "!=" }.Contains(op))
                     {
-                        if (!IsNumericType(leftType) || !IsNumericType(rightType))
+                        if (!IsNumericType(resultType) || !IsNumericType(rightOperandType))
                         {
-                            ReportError($"Relational operator '{op}' requires numeric operands, found: {leftType} and {rightType}", infixExpr);
-                            return "unknown"; // или булевый тип для совместимости, но ошибка уже сообщена
+                            ReportError($"Relational operator '{op}' requires numeric operands, found: {resultType} and {rightOperandType}", infixExpr);
+                            return "unknown";
                         }
                     }
                     // Проверяем, являются ли оба операнда булевыми для логических операторов сравнения
                     else if (new[] { "&&", "||" }.Contains(op))
                     {
-                        if (leftType != "boolean" || rightType != "boolean")
+                        if (resultType != "boolean" || rightOperandType != "boolean")
                         {
-                            ReportError($"Logical operator '{op}' requires boolean operands, found: {leftType} and {rightType}", infixExpr);
+                            ReportError($"Logical operator '{op}' requires boolean operands, found: {resultType} and {rightOperandType}", infixExpr);
                             return "unknown";
                         }
                     }
-                    return "boolean";
+                    // Результат операции сравнения - boolean
+                    resultType = "boolean";
                 }
-                // Арифметические операции
-                else if (new[] { "+", "-", "*", "/", "%" }.Contains(op))
+                // Арифметические/логические/другие бинарные операции
+                else if (new[] { "+", "-", "*", "/", "%", "&", "|", "^", "<<", ">>", ">>>" }.Contains(op))
                 {
-                    // Определяем тип результата арифметической операции
-                    string leftType = GetExpression2Type(operands[0]);
-                    string rightType = GetExpression2Type(operands[1]);
-
-                    if (!IsNumericType(leftType) || !IsNumericType(rightType))
+                    if (!IsNumericType(resultType) || !IsNumericType(rightOperandType))
                     {
-                        ReportError($"Arithmetic operator '{op}' requires numeric operands, found: {leftType} and {rightType}", infixExpr);
+                        ReportError($"Binary operator '{op}' requires numeric operands, found: {resultType} and {rightOperandType}", infixExpr);
                         return "unknown";
                     }
-
-                    return GetArithmeticResultType(leftType, rightType);
+                    // Результат арифметической операции зависит от типов операндов
+                    resultType = GetArithmeticResultType(resultType, rightOperandType);
                 }
-                // Операторы присваивания
+                // Операторы присваивания (редко встречаются внутри других выражений)
                 else if (new[] { "=", "+=", "-=", "*=", "/=", "%=" }.Contains(op))
                 {
-                    // Тип результата присваивания - тип правой части
-                    if (operands.Length > 1)
+                    // Для цепочек вроде a = b = c, тип правой части (c) должен быть совместим с типом левой (b, a)
+                    // Это сложнее, но для простоты, результат присваивания - тип правого операнда
+                    if (!AreTypesCompatible(resultType, rightOperandType))
                     {
-                        return GetExpression2Type(operands[1]);
+                        ReportError($"Assignment operator '{op}' requires compatible types, found: {resultType} and {rightOperandType}", infixExpr);
+                        return "unknown";
                     }
+                    resultType = rightOperandType;
+                }
+                else
+                {
+                    // Неизвестный оператор
+                    ReportError($"Unknown infix operator '{op}'", infixExpr);
+                    return "unknown";
                 }
             }
 
-            return "unknown";
+            return resultType;
         }
 
         private string GetPrefixExpressionType(JavaGrammarParser.PrefixExpressionContext prefixExpr)
