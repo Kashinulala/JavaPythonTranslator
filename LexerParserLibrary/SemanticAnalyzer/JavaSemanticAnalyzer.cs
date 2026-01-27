@@ -355,10 +355,30 @@ namespace LexerParserLibrary.SemanticAnalyzer
             if (context is JavaGrammarParser.PrimaryExpressionContext primaryExpr)
             {
                 var expr1 = primaryExpr.expression1();
-                if (expr1 != null && expr1 is JavaGrammarParser.SimpleExpression2Context simpleExpr2)
+                if (expr1 != null)
                 {
-                    var expr2 = simpleExpr2.expression2();
-                    return GetExpression2Type(expr2);
+
+                    // Попробуем найти PostfixExpressionContext среди дочерних элементов expr1
+                    for (int i = 0; i < expr1.ChildCount; i++)
+                    {
+                        var child = expr1.GetChild(i);
+                        if (child is JavaGrammarParser.PostfixExpressionContext postfixExprAsChild)
+                        {
+                            // expr1 содержит PostfixExpressionContext как дочерний элемент
+                            // Передаем его в GetExpression2Type
+                            return GetExpression2Type(postfixExprAsChild); // Upcast до Expression2Context
+                        }
+                    }
+
+                    // Если не нашли PostfixExpression среди детей expr1, проверяем SimpleExpression2Context (например, для "x + y" или "func()")
+                    if (expr1 is JavaGrammarParser.SimpleExpression2Context simpleExpr2)
+                    {
+                        var expr2 = simpleExpr2.expression2();
+                        // Теперь вызываем вашу существующую реализацию GetExpression2Type
+                        return GetExpression2Type(expr2);
+                    }
+                    // Можно добавить другие возможные типы expr1, если нужно
+                    // else if (expr1 is JavaGrammarParser.InfixExpressionContext infixExpr) { ... }
                 }
             }
             return "unknown";
