@@ -484,6 +484,27 @@ namespace LexerParserLibrary.SemanticAnalyzer
                 // Операторы сравнения - результат boolean
                 if (new[] { "<", ">", "<=", ">=", "==", "!=", "&&", "||" }.Contains(op))
                 {
+                    string leftType = GetExpression2Type(operands[0]);
+                    string rightType = GetExpression2Type(operands[1]);
+
+                    // Проверяем, являются ли оба операнда числовыми для числовых операторов сравнения
+                    if (new[] { "<", ">", "<=", ">=", "==", "!=" }.Contains(op))
+                    {
+                        if (!IsNumericType(leftType) || !IsNumericType(rightType))
+                        {
+                            ReportError($"Relational operator '{op}' requires numeric operands, found: {leftType} and {rightType}", infixExpr);
+                            return "unknown"; // или булевый тип для совместимости, но ошибка уже сообщена
+                        }
+                    }
+                    // Проверяем, являются ли оба операнда булевыми для логических операторов сравнения
+                    else if (new[] { "&&", "||" }.Contains(op))
+                    {
+                        if (leftType != "boolean" || rightType != "boolean")
+                        {
+                            ReportError($"Logical operator '{op}' requires boolean operands, found: {leftType} and {rightType}", infixExpr);
+                            return "unknown";
+                        }
+                    }
                     return "boolean";
                 }
                 // Арифметические операции
@@ -492,6 +513,12 @@ namespace LexerParserLibrary.SemanticAnalyzer
                     // Определяем тип результата арифметической операции
                     string leftType = GetExpression2Type(operands[0]);
                     string rightType = GetExpression2Type(operands[1]);
+
+                    if (!IsNumericType(leftType) || !IsNumericType(rightType))
+                    {
+                        ReportError($"Arithmetic operator '{op}' requires numeric operands, found: {leftType} and {rightType}", infixExpr);
+                        return "unknown";
+                    }
 
                     return GetArithmeticResultType(leftType, rightType);
                 }
