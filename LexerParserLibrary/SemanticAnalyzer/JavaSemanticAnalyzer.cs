@@ -437,87 +437,108 @@ namespace LexerParserLibrary.SemanticAnalyzer
 
         // Анализ метода main
         public override object VisitMethodDeclaratorRest(JavaGrammarParser.MethodDeclaratorRestContext context)
+{
+    // Проверяем, является ли это main методом
+    var parent = GetParentOfType<JavaGrammarParser.MethodOrFieldDeclContext>(context);
+    if (parent != null && parent.identifier() != null)
+    {
+        string methodName = parent.identifier().GetText();
+
+        if (methodName == "main")
         {
-            // Проверяем, является ли это main методом
-            var parent = GetParentOfType<JavaGrammarParser.MethodOrFieldDeclContext>(context);
-            if (parent != null && parent.identifier() != null)
+            // Проверяем, что это void метод
+            if (parent.type() != null && !IsVoidType(parent.type()))
             {
-                string methodName = parent.identifier().GetText();
-
-                if (methodName == "main")
-                {
-                    // Проверяем, что это void метод
-                    if (parent.type() != null && !IsVoidType(parent.type()))
-                    {
-                        ReportError("Main method must have void return type", context);
-                    }
-
-                    // Проверяем параметры (должны быть String[] args)
-                    var formalParams = context.formalParameters();
-                    if (formalParams != null)
-                    {
-                        var formalParamDecls = formalParams.formalParameterDecls();
-                        if (formalParamDecls != null)
-                        {
-                            // В правильной структуре грамматики параметры находятся в formalParameterDecls
-                            // и включают в себя как тип, так и имя переменной
-
-                            // Проверяем тип параметра и имя переменной в formalParameterDecls
-                            if (formalParamDecls.type() != null && formalParamDecls.formalParameterDeclsRest() != null)
-                            {
-                                string paramType = GetTypeName(formalParamDecls.type());
-                                var paramRest = formalParamDecls.formalParameterDeclsRest();
-                                string paramName = paramRest.variableDeclaratorId() != null ?
-                                    paramRest.variableDeclaratorId().GetText() : "";
-
-                                // Проверяем, является ли это массив String
-                                // Для main метода параметр должен быть String[]
-                                if (!paramType.Contains("String") || !paramName.EndsWith("[]"))
-                                {
-                                    ReportError("Main method parameter must be of type String[]", context);
-                                }
-                            }
-                            else
-                            {
-                                // Если тип или имя параметра не указаны, это ошибка для main метода
-                                ReportError("Main method must have exactly one parameter of type String[]", context);
-                            }
-                        }
-                        else
-                        {
-                            // Если formalParameterDecls отсутствует, значит параметров нет
-                            ReportError("Main method must have exactly one parameter of type String[]", context);
-                        }
-                    }
-                    else
-                    {
-                        // Если formalParameters отсутствует, значит параметров нет
-                        ReportError("Main method must have exactly one parameter of type String[]", context);
-                    }
-
-                    // Проверяем модификаторы (должны быть public static)
-                    var memberDecl = GetParentOfType<JavaGrammarParser.MemberClassBodyDeclarationContext>(context);
-                    if (memberDecl != null)
-                    {
-                        bool hasPublic = false, hasStatic = false;
-
-                        foreach (var modifier in memberDecl.modifier())
-                        {
-                            string modText = modifier.GetText();
-                            if (modText == "public") hasPublic = true;
-                            if (modText == "static") hasStatic = true;
-                        }
-
-                        if (!hasPublic || !hasStatic)
-                        {
-                            ReportError("Main method must be public static", context);
-                        }
-                    }
-                }
+                ReportError("Main method must have void return type", context);
             }
 
-            return base.VisitMethodDeclaratorRest(context);
+            // Проверяем параметры (должны быть String[] args)
+            var formalParams = context.formalParameters();
+            if (formalParams != null)
+            {
+                var formalParamDecls = formalParams.formalParameterDecls();
+                if (formalParamDecls != null)
+                {
+                    // В данной грамматике FormalParameterDeclsContext представляет первый параметр.
+                    // Остальные параметры (если есть) находятся в formalParameterDeclsRest().
+                    // Нам нужно проверить, есть ли только один параметр.
+
+                    // Проверяем, есть ли первый параметр (в formalParameterDecls)
+                    bool hasFirstParam = formalParamDecls.type() != null && 
+                                         formalParamDecls.formalParameterDeclsRest() != null &&
+                                         formalParamDecls.formalParameterDeclsRest().variableDeclaratorId() != null;
+
+                    // Проверяем, есть ли дополнительные параметры (внутри formalParameterDeclsRest)
+                    bool hasAdditionalParams = formalParamDecls.formalParameterDeclsRest() != null &&
+                                               formalParamDecls.formalParameterDeclsRest().formalParameterDecls() != null;
+
+                    if (!hasFirstParam)
+                    {
+                        // Формально, если нет первого параметра, это ошибка
+                        ReportError("Main method must have exactly one parameter of type String[]", context);
+                        return base.VisitMethodDeclaratorRest(context);
+                    }
+
+                    if (hasAdditionalParams)
+                    {
+                        // Если есть дополнительные параметры, это ошибка для main
+                        ReportError("Main method must have exactly one parameter of type String[]", context);
+                        return base.VisitMethodDeclaratorRest(context);
+                    }
+
+                    // Если дошли сюда, значит есть только один параметр
+                    // Проверяем его тип и имя
+                    string paramType = GetTypeName(formalParamDecls.type());
+                    string paramName = formalParamDecls.formalParameterDeclsRest().variableDeclaratorId().GetText();
+
+                    // Проверяем, является ли это массив String
+                    // Для main метода параметр должен быть String[]
+                    // Проверка может быть базовой: тип содержит "String" и имя переменной оканчивается на "[]"
+                    // Более точная проверка может потребовать анализа dims (размерностей массива) в типе
+                    bool isValidType = paramType.Contains("String"); // Базовая проверка
+                    // Проверка массива может быть сложнее, но часто имя переменной указывает на массив
+                    bool isArray = paramName.EndsWith("[]");
+
+                    if (!isValidType || !isArray)
+                    {
+                        ReportError("Main method parameter must be of type String[]", context);
+                    }
+                }
+                else
+                {
+                    // Если formalParameterDecls отсутствует, значит параметров нет
+                    ReportError("Main method must have exactly one parameter of type String[]", context);
+                }
+            }
+            else
+            {
+                // Если formalParameters отсутствует, значит параметров нет
+                ReportError("Main method must have exactly one parameter of type String[]", context);
+            }
+
+            // Проверяем модификаторы (должны быть public static)
+            var memberDecl = GetParentOfType<JavaGrammarParser.MemberClassBodyDeclarationContext>(context);
+            if (memberDecl != null)
+            {
+                bool hasPublic = false, hasStatic = false;
+
+                foreach (var modifier in memberDecl.modifier())
+                {
+                    string modText = modifier.GetText();
+                    if (modText == "public") hasPublic = true;
+                    if (modText == "static") hasStatic = true;
+                }
+
+                if (!hasPublic || !hasStatic)
+                {
+                    ReportError("Main method must be public static", context);
+                }
+            }
         }
+    }
+
+    return base.VisitMethodDeclaratorRest(context);
+}
 
         // Вспомогательный метод для проверки void типа
         private bool IsVoidType(JavaGrammarParser.TypeContext typeContext)
@@ -778,51 +799,6 @@ namespace LexerParserLibrary.SemanticAnalyzer
             return base.VisitEnhancedForControl(context);
         }
 
-        // Вспомогательный метод для анализа цикла for-each
-
-        private void VisitForEachLoop(JavaGrammarParser.EnhancedForControlContext context)
-        {
-            var forVarControl = context.forVarControl();
-            if (forVarControl != null && forVarControl.type() != null)
-            {
-                string elementType = GetTypeName(forVarControl.type());
-                if (!string.IsNullOrEmpty(elementType))
-                {
-                    // Для EnhancedForControlContext выражение коллекции доступно как дочерний элемент
-                    // ищем его среди дочерних элементов контекста
-                    JavaGrammarParser.ExpressionContext collectionExpression = null;
-
-                    // Проходим по дочерним элементам, чтобы найти выражение коллекции
-                    for (int i = 0; i < context.ChildCount; i++)
-                    {
-                        var child = context.GetChild(i);
-                        if (child is JavaGrammarParser.ExpressionContext expr)
-                        {
-                            collectionExpression = expr;
-                            break;
-                        }
-                    }
-
-                    if (collectionExpression != null)
-                    {
-                        string collectionType = GetExpressionType(collectionExpression);
-                        if (!IsCollectionType(collectionType))
-                        {
-                            ReportError($"Expression in for-each loop must be a collection type, found: {collectionType}", context);
-                        }
-                        else if (!AreTypesCompatible(collectionType, elementType))
-                        {
-                            ReportError($"Incompatible types in for-each loop: collection type {collectionType} and element type {elementType}", context);
-                        }
-                    }
-                    else
-                    {
-                        ReportError("Missing collection expression in for-each loop", context);
-                    }
-                }
-            }
-        }
-
         // Анализ оператора break
         public override object VisitBreakStatement(JavaGrammarParser.BreakStatementContext context)
         {
@@ -885,14 +861,23 @@ namespace LexerParserLibrary.SemanticAnalyzer
                             }
                             else
                             {
-                                // Проверяем аргументы метода коллекции
+                                // --- НОВЫЙ ВЫЗОВ ValidateCollectionMethodCall ---
+                                // Проверяем базовую совместимость метода с типом коллекции
+                                ValidateCollectionMethodCall(symbol.Type, methodName, context);
+
+                                // Затем проверяем аргументы метода коллекции
                                 ValidateCollectionMethodCallWithArguments(symbol.Type, methodName, context);
+                                // ---
                             }
                         }
                         else
                         {
                             ReportWarning($"Target object '{targetObjectName}' not found in symbol table. Collection method check skipped.", context);
                         }
+                    }
+                    else
+                    {
+                        ReportWarning($"Could not determine target object for method call '{methodName}'. Collection method checks may be incomplete.", context);
                     }
                 }
             }
@@ -1090,52 +1075,103 @@ namespace LexerParserLibrary.SemanticAnalyzer
         // Вспомогательный метод для получения типа элемента коллекции
         private string GetCollectionElementType(string collectionType)
         {
-            // Упрощенная реализация - в реальной системе нужно извлекать из дженериков
+            // Реализуйте извлечение типа элемента из строки типа, например "ArrayList<String>" -> "String"
+            // Это может быть сложнее, если тип не содержит дженериков (raw type)
             if (collectionType.Contains("<"))
             {
                 int start = collectionType.IndexOf('<') + 1;
-                int end = collectionType.LastIndexOf('>');
+                int end = collectionType.Contains(",") ? collectionType.IndexOf(',') : collectionType.LastIndexOf('>');
                 if (start < end)
                 {
-                    return collectionType.Substring(start, end - start);
+                    return collectionType.Substring(start, end - start).Trim();
                 }
             }
-            return "Object"; // по умолчанию
+            return "Object"; // Значение по умолчанию для raw types
         }
 
         // Вспомогательный метод для проверки аргументов вызова метода коллекции
+        // Этот метод нужно реализовать или убедиться, что он реализован корректно
         private void ValidateCollectionMethodCallWithArguments(string collectionType, string methodName, JavaGrammarParser.MethodOrFieldSelectorContext context)
         {
-            // Находим аргументы метода
-            var arguments = GetMethodArguments(context);
+            // 1. Извлечь аргументы метода из контекста
+            var arguments = GetMethodArguments(context); // Вам нужно реализовать этот вспомогательный метод
 
-            if (methodName == "add" && arguments != null && arguments.Count > 0)
+            // 2. Проверить количество аргументов в зависимости от метода
+            switch (methodName)
             {
-                string collectionElementType = GetCollectionElementType(collectionType);
-                string argumentType = GetExpressionType(arguments[0]);
+                case "add":
+                    if (arguments.Count == 1)
+                    {
+                        // Проверить тип аргумента против типа элемента коллекции
+                        string collectionElementType = GetCollectionElementType(collectionType); // Реализовать
+                        string argumentType = GetExpressionType(arguments[0]); // Используем существующий метод
 
-                if (!AreTypesCompatible(argumentType, collectionElementType))
-                {
-                    ReportError($"Cannot add element of type {argumentType} to collection of type {collectionType}<element: {collectionElementType}>", context);
-                }
-            }
-            else if (methodName == "put" && arguments != null && arguments.Count >= 2)
-            {
-                // Проверка для Map.put(key, value)
-                string collectionKeyType = GetMapKeyType(collectionType);
-                string collectionValueType = GetMapValueType(collectionType);
-                string keyType = GetExpressionType(arguments[0]);
-                string valueType = GetExpressionType(arguments[1]);
+                        if (!AreTypesCompatible(argumentType, collectionElementType))
+                        {
+                            ReportError($"Cannot add element of type {argumentType} to collection of type {collectionType}<element: {collectionElementType}>", context);
+                        }
+                    }
+                    else
+                    {
+                        ReportError($"Method 'add' expects 1 argument", context);
+                    }
+                    break;
 
-                if (!AreTypesCompatible(keyType, collectionKeyType))
-                {
-                    ReportError($"Cannot put key of type {keyType} in map of type {collectionType}<key: {collectionKeyType}, value: {collectionValueType}>", context);
-                }
+                case "put":
+                    if (arguments.Count == 2)
+                    {
+                        // Проверить типы аргументов против типа ключа и значения коллекции (Map)
+                        string collectionKeyType = GetMapKeyType(collectionType); // Реализовать
+                        string collectionValueType = GetMapValueType(collectionType); // Реализовать
+                        string keyType = GetExpressionType(arguments[0]);
+                        string valueType = GetExpressionType(arguments[1]);
 
-                if (!AreTypesCompatible(valueType, collectionValueType))
-                {
-                    ReportError($"Cannot put value of type {valueType} in map of type {collectionType}<key: {collectionKeyType}, value: {collectionValueType}>", context);
-                }
+                        if (!AreTypesCompatible(keyType, collectionKeyType))
+                        {
+                            ReportError($"Cannot put key of type {keyType} in map of type {collectionType}<key: {collectionKeyType}, value: {collectionValueType}>", context);
+                        }
+
+                        if (!AreTypesCompatible(valueType, collectionValueType))
+                        {
+                            ReportError($"Cannot put value of type {valueType} in map of type {collectionType}<key: {collectionKeyType}, value: {collectionValueType}>", context);
+                        }
+                    }
+                    else
+                    {
+                        ReportError($"Method 'put' expects 2 arguments", context);
+                    }
+                    break;
+
+                case "remove":
+                    // Аналогично, проверить тип аргумента
+                    if (arguments.Count == 1)
+                    {
+                        string collectionElementType = GetCollectionElementType(collectionType);
+                        string argumentType = GetExpressionType(arguments[0]);
+                        // В Map remove может принимать Key или Key и Value
+                        if (collectionType.Contains("Map"))
+                        {
+                            string collectionKeyType = GetMapKeyType(collectionType);
+                            if (!AreTypesCompatible(argumentType, collectionKeyType))
+                            {
+                                ReportError($"Cannot remove key of type {argumentType} from map of type {collectionType}", context);
+                            }
+                        }
+                        else
+                        {
+                            if (!AreTypesCompatible(argumentType, collectionElementType))
+                            {
+                                ReportError($"Cannot remove element of type {argumentType} from collection of type {collectionType}", context);
+                            }
+                        }
+                    }
+                    break;
+
+                // Добавьте другие методы по необходимости
+
+                default:
+                    // Для других методов коллекций можно реализовать аналогичные проверки
+                    break;
             }
         }
 
@@ -1175,7 +1211,7 @@ namespace LexerParserLibrary.SemanticAnalyzer
                 int end = mapType.IndexOf(',');
                 if (start < end)
                 {
-                    return mapType.Substring(start, end - start);
+                    return mapType.Substring(start, end - start).Trim();
                 }
             }
             return "Object";
