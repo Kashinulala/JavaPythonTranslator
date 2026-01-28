@@ -662,78 +662,60 @@ namespace TranslatorLibrary.SemanticAnalyzer
         {
             if (context == null) return "unknown";
 
+            // Обработка AssignmentExpression (например, z = q)
             if (context is JavaGrammarParser.AssignmentExpressionContext assignmentExpr)
             {
-                // Тип присваивания - тип правой части (последнего выражения в списке, если их несколько)
                 var expressions = assignmentExpr.expression();
-                if (expressions != null && expressions.Length > 0)
+                if (expressions != null && expressions.Length >= 2)
                 {
-                    if (expressions.Length >= 2) // assignmentExpr = left = right
+                    string leftType = GetExpressionType(expressions[0]);
+                    string rightType = GetExpressionType(expressions[expressions.Length - 1]);
+
+                    // Проверяем, что левая часть - это допустимая переменная для присваивания
+                    if (leftType == "unknown")
                     {
-                        // expressions[0] = left (l-value), expressions[1] = right (r-value)
-                        string leftType = GetExpressionType(expressions[0]); // Тип переменной слева (z)
-                        string rightType = GetExpressionType(expressions[expressions.Length - 1]); // Тип выражения справа (q)
-
-                        // Проверяем, что левая часть - это допустимая переменная для присваивания
-                        // Это может быть сложнее, но на простом уровне проверим, не "unknown" ли тип (значит, переменная не найдена)
-                        if (leftType == "unknown")
+                        string varName = TryGetIdentifierName(expressions[0]);
+                        if (!string.IsNullOrEmpty(varName))
                         {
-                            // Это означает, что переменная слева не найдена в SymbolTable
-                            // Нужно получить имя переменной из expressions[0] для сообщения об ошибке
-                            // Это требует дополнительного анализа выражения.
-                            // Упрощённо: попробуем получить имя из IdentifierPrimary, если это простой идентификатор
-                            string varName = TryGetIdentifierName(expressions[0]); // Вспомогательный метод
-                            if (!string.IsNullOrEmpty(varName))
-                            {
-                                ReportError($"Variable '{varName}' is not declared", assignmentExpr);
-                            }
-                            else
-                            {
-                                ReportError($"Left side of assignment is not a valid variable", assignmentExpr);
-                            }
-                            return "unknown"; // Возвращаем unknown как ошибка
+                            ReportError($"Variable '{varName}' is not declared", assignmentExpr);
                         }
-
-                        // Проверяем, что правая часть - это допустимое выражение
-                        if (rightType == "unknown")
+                        else
                         {
-                            // Это означает, что выражение справа (или его часть) не удалось проанализировать
-                            // Часто это означает, что переменная не объявлена
-                            string varName = TryGetIdentifierName(expressions[expressions.Length - 1]); // Попробуем имя из правой части
-                            if (!string.IsNullOrEmpty(varName))
-                            {
-                                ReportError($"Variable '{varName}' is not declared", assignmentExpr);
-                            }
-                            else
-                            {
-                                ReportError($"Right side of assignment has unknown type", assignmentExpr);
-                            }
-                            return "unknown"; // Возвращаем unknown как ошибка
+                            ReportError($"Left side of assignment is not a valid variable", assignmentExpr);
                         }
-
-                        // Проверяем совместимость типов
-                        if (!AreTypesCompatible(leftType, rightType))
-                        {
-                            string leftExprText = expressions[0].GetText(); // Имя переменной или выражение слева
-                            string rightExprText = expressions[expressions.Length - 1].GetText(); // Выражение справа
-                            ReportError($"Cannot assign '{rightType}' to '{leftType}' (from '{rightExprText}' to '{leftExprText}')", assignmentExpr);
-                            return "unknown"; // Возвращаем unknown как ошибка
-                        }
-
-                        // Если все проверки пройдены, возвращаем тип правой части
-                        return rightType; // Или, если нужно тип l-value, то leftType
+                        return "unknown";
                     }
-                    else if (expressions.Length == 1)
+
+                    // Проверяем, что правая часть - это допустимое выражение
+                    if (rightType == "unknown")
                     {
-                        // Это может быть случай, если выражение только одно (например, вложенный вызов)
-                        // Но для ASSIGN всегда должно быть 2: лево = право
-                        // Если пришло только одно выражение, возможно, это не ASSIGN, а просто PrimaryExpression
-                        // Это маловероятно для AssignmentExpression, но на всякий случай:
-                        return GetExpressionType(expressions[0]);
+                        string varName = TryGetIdentifierName(expressions[expressions.Length - 1]);
+                        if (!string.IsNullOrEmpty(varName))
+                        {
+                            ReportError($"Variable '{varName}' is not declared", assignmentExpr);
+                        }
+                        else
+                        {
+                            ReportError($"Right side of assignment has unknown type", assignmentExpr);
+                        }
+                        return "unknown";
                     }
+
+                    // Проверяем совместимость типов
+                    if (!AreTypesCompatible(leftType, rightType))
+                    {
+                        string leftExprText = expressions[0].GetText();
+                        string rightExprText = expressions[expressions.Length - 1].GetText();
+                        ReportError($"Cannot assign '{rightType}' to '{leftType}' (from '{rightExprText}' to '{leftExprText}')", assignmentExpr);
+                        return "unknown";
+                    }
+
+                    return rightType;
                 }
+                // Если выражений меньше 2, возвращаем unknown
                 return "unknown";
             }
+            // Обработка PrimaryExpression (например, a[1], 10)
             else if (context is JavaGrammarParser.PrimaryExpressionContext primaryExpr)
             {
                 var expr1 = primaryExpr.expression1();
@@ -741,8 +723,10 @@ namespace TranslatorLibrary.SemanticAnalyzer
                 {
                     return GetExpression1Type(expr1);
                 }
+                return "unknown";
             }
 
+            // Если тип выражения не распознан, возвращаем unknown
             return "unknown";
         }
 
@@ -885,13 +869,6 @@ namespace TranslatorLibrary.SemanticAnalyzer
 
             // Если тип не распознан, возвращаем unknown
             return "unknown";
-        }
-
-        // Вспомогательный метод для создания строки "[][]..." по количеству скобок
-        private string BuildArrayPart(int dimensionCount)
-        {
-            if (dimensionCount == 0) return "";
-            return new string('[', dimensionCount) + new string(']', dimensionCount);
         }
 
         private string GetInfixExpressionType(JavaGrammarParser.InfixExpressionContext infixExpr)
@@ -1073,6 +1050,58 @@ namespace TranslatorLibrary.SemanticAnalyzer
                         var symbol = _symbolTable.GetSymbol(varName);
                         primaryType = symbol?.Type ?? "unknown";
                     }
+
+                    var suffix = idPrimary.identifierSuffix(); // suffix может быть ArrayAccessSuffix или ClassLiteralSuffix
+                    if (suffix != null)
+                    {
+                        if (suffix is JavaGrammarParser.ArrayAccessSuffixContext arrayAccessSuffix)
+                        {
+                            // primaryType должен быть массивом (например, int[], int[][], String[][] и т.д.)
+                            if (primaryType.EndsWith("[]"))
+                            {
+                                // Тип результата доступа к массиву - это тип элемента массива (убираем ОДНУ пару [])
+                                // ВАЖНО: Удаляем только последнюю пару []
+                                int lastBracketIndex = primaryType.LastIndexOf("[]");
+                                if (lastBracketIndex >= 0 && lastBracketIndex == primaryType.Length - 2) // Проверяем, что [] в конце
+                                {
+                                    primaryType = primaryType.Substring(0, lastBracketIndex); // Удаляем последние []
+                                }
+                                else
+                                {
+                                    // Теоретически не должно сработать, если EndsWith("[]") true, но на всякий случай
+                                    ReportError($"Invalid array type format '{primaryType}'", arrayAccessSuffix);
+                                    return "unknown";
+                                }
+                            }
+                            else
+                            {
+                                // Ошибка: пытаются получить доступ к массиву у переменной, которая не является массивом
+                                ReportError($"Cannot index non-array type '{primaryType}'", arrayAccessSuffix);
+                                return "unknown";
+                            }
+
+                            // Проверим тип индекса (expression в [expression])
+                            var indexExpr = arrayAccessSuffix.expression();
+                            if (indexExpr != null)
+                            {
+                                string indexType = GetExpressionType(indexExpr);
+                                if (!IsNumericType(indexType))
+                                {
+                                    ReportError($"Array index must be numeric, found: {indexType}", indexExpr);
+                                    return "unknown";
+                                }
+                            }
+                        }
+                        else if (suffix is JavaGrammarParser.ClassLiteralSuffixContext classLitSuffix)
+                        {
+                            // Тип суффикса .class - это Class<?>
+                            // Для простоты, просто возвращаем "Class"
+                            // Но это может быть сложнее, если нужно определить тип элемента
+                            // primaryType = "Class";
+                            // return primaryType; // Если .class - это конечный результат
+                        }
+                        // Добавьте другие типы suffix, если они есть
+                    }
                 }
                 else if (primary is JavaGrammarParser.NewCreatorPrimaryContext newCreatorPrimary)
                 {
@@ -1114,15 +1143,51 @@ namespace TranslatorLibrary.SemanticAnalyzer
                     }
                 }
                 // Проверяем selector (например, вызовы методов, доступ к полям, доступ к массивам)
+                // Проверяем selector (например, вызовы методов, доступ к полям, доступ к массивам)
                 if (postfixExpr.selector() != null && postfixExpr.selector().Length > 0)
                 {
-                    // Пока возвращаем тип первичного выражения, хотя в реальности он может измениться
-                    // в зависимости от вызываемого метода/поля
-                    // Для простых случаев (без вызова методов) возвращаем тип primary
-                    return primaryType;
+                    // Проходим по каждому селектору (обычно это один для простого доступа к массиву или точка для вызова метода/доступа к полю)
+                    foreach (var sel in postfixExpr.selector())
+                    {
+                        if (sel is JavaGrammarParser.ArraySelectorContext arraySel)
+                        {
+                            // primaryType должен быть массивом (например, int[])
+                            if (primaryType.EndsWith("[]"))
+                            {
+                                int lastBracketIndex = primaryType.LastIndexOf("[]");
+                                if (lastBracketIndex >= 0 && lastBracketIndex == primaryType.Length - 2)
+                                {
+                                    primaryType = primaryType.Substring(0, lastBracketIndex);
+                                }
+                                else
+                                {
+                                    ReportError($"Invalid array type format '{primaryType}'", arraySel);
+                                    return "unknown";
+                                }
+                            }
+                            else
+                            {
+                                ReportError($"Cannot index non-array type '{primaryType}'", arraySel);
+                                return "unknown";
+                            }
+
+                            // Проверим тип индекса (expression в [expression])
+                            var indexExpr = arraySel.expression();
+                            if (indexExpr != null)
+                            {
+                                string indexType = GetExpressionType(indexExpr);
+                                if (!IsNumericType(indexType))
+                                {
+                                    ReportError($"Array index must be numeric, found: {indexType}", indexExpr);
+                                    return "unknown";
+                                }
+                            }
+                        }
+                        // ... (обработка других типов selector: ArgumentsSelector, DotIdentifierSelector) ...
+                    }
                 }
 
-                // --- КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: Возвращаем тип первичного выражения ---
+                // Если селекторов нет, возвращаем тип primary
                 return primaryType;
             }
 
@@ -1148,7 +1213,7 @@ namespace TranslatorLibrary.SemanticAnalyzer
                                                                           // Подсчитываем количество [] в arrayCreatorRest
                     int dimensions = CountArrayDimensions(arrayCreatorRest);
                     // Формируем имя типа массива, например, "int[][]"
-                    return baseTypeName + new string('[', dimensions) + new string(']', dimensions);
+                    return baseTypeName + BuildArrayPart(dimensions);
                 }
             }
             // Проверяем создание массива из созданного имени (класса)
@@ -1162,7 +1227,7 @@ namespace TranslatorLibrary.SemanticAnalyzer
                     // Извлекаем имя типа из createdName
                     string baseTypeName = GetCreatedNameTypeName(createdName); // Нужно реализовать
                     int dimensions = CountArrayDimensions(arrayCreatorRest);
-                    return baseTypeName + new string('[', dimensions) + new string(']', dimensions);
+                    return baseTypeName + BuildArrayPart(dimensions);
                 }
             }
             // Проверяем создание класса (не массива)
@@ -1177,6 +1242,18 @@ namespace TranslatorLibrary.SemanticAnalyzer
 
             // Если не подошло ни одно правило, возвращаем unknown
             return "unknown";
+        }
+
+        private string BuildArrayPart(int dimensions)
+        {
+            // Правильный способ: добавить "[]" dimensions раз
+            string arrayPart = "";
+            for (int i = 0; i < dimensions; i++)
+            {
+                arrayPart += "[]";
+            }
+            return arrayPart;
+
         }
 
         // Новый метод для получения имени базового типа
