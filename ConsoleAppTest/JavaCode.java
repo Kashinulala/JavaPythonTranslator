@@ -7,7 +7,7 @@ public class SimpleJavaExample {
         boolean condition = true;
         String message = "Hello from Java!";
         System.out.println("The sum is: " + x);
-        
+        int[] a = new int[5];
 
         if (!condition) {
             result = x + y;

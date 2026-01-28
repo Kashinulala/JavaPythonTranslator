@@ -1,4 +1,5 @@
 ﻿using Antlr4.Runtime;
+using Antlr4.Runtime.Tree;
 
 namespace TranslatorLibrary.SemanticAnalyzer
 {
@@ -614,21 +615,44 @@ namespace TranslatorLibrary.SemanticAnalyzer
         }
 
         // Анализ создания объектов и коллекций
+        // Анализ создания объектов и коллекций
         public override object VisitNewCreatorPrimary(JavaGrammarParser.NewCreatorPrimaryContext context)
         {
-            if (context.creator() != null && context.creator().createdName() != null)
+            var creator = context.creator();
+            if (creator != null)
             {
-                var createdName = context.creator().createdName();
-                if (createdName.identifier().Length > 0)
+                // Явно проверяем тип creator
+                if (creator is JavaGrammarParser.ClassCreatorContext classCreator)
                 {
-                    string className = createdName.identifier()[0].GetText();
-
-                    // Проверяем, существует ли класс
-                    if (!_symbolTable.IsClass(className))
+                    // Только для создания объекта класса (new MyClass())
+                    var createdName = classCreator.createdName();
+                    if (createdName != null && createdName.identifier().Length > 0)
                     {
-                        ReportError($"Class '{className}' is not declared", context);
+                        string className = createdName.identifier()[0].GetText();
+
+                        // Проверяем, существует ли класс
+                        if (!_symbolTable.IsClass(className))
+                        {
+                            ReportError($"Class '{className}' is not declared", context);
+                        }
                     }
                 }
+                else if (creator is JavaGrammarParser.ArrayCreatorFromClassContext arrayCreatorFromClass)
+                {
+                    // Для создания массива класса (new MyClass[size])
+                    var createdName = arrayCreatorFromClass.createdName();
+                    if (createdName != null && createdName.identifier().Length > 0)
+                    {
+                        string className = createdName.identifier()[0].GetText();
+
+                        // Проверяем, существует ли класс
+                        if (!_symbolTable.IsClass(className))
+                        {
+                            ReportError($"Class '{className}' is not declared", context);
+                        }
+                    }
+                }
+                // ArrayCreatorFromBasicTypeContext (new int[size]) не имеет createdName, пропускаем
             }
 
             return base.VisitNewCreatorPrimary(context);
@@ -822,22 +846,46 @@ namespace TranslatorLibrary.SemanticAnalyzer
         {
             if (context == null) return "unknown";
 
-            if (context is JavaGrammarParser.BasicTypeTypeContext basicTypeCtx &&
-                basicTypeCtx.basicType() != null)
+            if (context is JavaGrammarParser.BasicTypeTypeContext basicTypeCtx)
             {
-                return basicTypeCtx.basicType().GetText().ToLower();
-            }
-
-            if (context is JavaGrammarParser.ReferenceTypeTypeContext refTypeCtx)
-            {
-                var refType = refTypeCtx.referenceType();
-                if (refType != null && refType.identifier().Length > 0)
+                if (basicTypeCtx.basicType() != null)
                 {
-                    return refType.identifier()[0].GetText();
+                    // Получаем базовый тип (int, boolean, и т.д.)
+                    string baseTypeName = GetBasicTypeName(basicTypeCtx.basicType()); // Используем наш новый метод
+                                                                                      // Получаем количество размерностей массива
+                    int dimensionCount = basicTypeCtx.LBRACK().Length; // Количество токенов [
+                                                                       // Строим полное имя типа
+                    string fullTypeName = baseTypeName + BuildArrayPart(dimensionCount);
+                    return fullTypeName;
+                }
+            }
+            else if (context is JavaGrammarParser.ReferenceTypeTypeContext refTypeCtx)
+            {
+                if (refTypeCtx.referenceType() != null)
+                {
+                    var refType = refTypeCtx.referenceType();
+                    if (refType.identifier().Length > 0)
+                    {
+                        // Получаем имя класса (MyClass, String, и т.д.)
+                        string baseTypeName = refType.identifier()[0].GetText();
+                        // Получаем количество размерностей массива
+                        int dimensionCount = refTypeCtx.LBRACK().Length; // Количество токенов [
+                                                                         // Строим полное имя типа
+                        string fullTypeName = baseTypeName + BuildArrayPart(dimensionCount);
+                        return fullTypeName;
+                    }
                 }
             }
 
+            // Если тип не распознан, возвращаем unknown
             return "unknown";
+        }
+
+        // Вспомогательный метод для создания строки "[][]..." по количеству скобок
+        private string BuildArrayPart(int dimensionCount)
+        {
+            if (dimensionCount == 0) return "";
+            return new string('[', dimensionCount) + new string(']', dimensionCount);
         }
 
         private string GetInfixExpressionType(JavaGrammarParser.InfixExpressionContext infixExpr)
@@ -1023,13 +1071,9 @@ namespace TranslatorLibrary.SemanticAnalyzer
                 else if (primary is JavaGrammarParser.NewCreatorPrimaryContext newCreatorPrimary)
                 {
                     var creator = newCreatorPrimary.creator();
-                    if (creator != null && creator.createdName() != null)
+                    if (creator != null)
                     {
-                        var createdName = creator.createdName();
-                        if (createdName.identifier().Length > 0)
-                        {
-                            primaryType = createdName.identifier()[0].GetText();
-                        }
+                        primaryType = GetCreatorType(creator); // Вызываем новый метод
                     }
                 }
                 else if (primary is JavaGrammarParser.ParenthesizedPrimaryContext parenthPrimary)
@@ -1074,6 +1118,144 @@ namespace TranslatorLibrary.SemanticAnalyzer
 
                 // --- КЛЮЧЕВОЕ ИЗМЕНЕНИЕ: Возвращаем тип первичного выражения ---
                 return primaryType;
+            }
+
+            return "unknown";
+        }
+
+        // Метод для определения типа выражения 'new'
+        // Метод для определения типа выражения 'new'
+        private string GetCreatorType(JavaGrammarParser.CreatorContext creator)
+        {
+            if (creator == null) return "unknown";
+
+            // Проверяем, является ли это созданием массива из базового типа
+            if (creator is JavaGrammarParser.ArrayCreatorFromBasicTypeContext arrayCreatorBasic)
+            {
+                var basicTypeCtx = arrayCreatorBasic.basicType();
+                var arrayCreatorRest = arrayCreatorBasic.arrayCreatorRest();
+
+                if (basicTypeCtx != null && arrayCreatorRest != null)
+                {
+                    // string baseTypeName = GetTypeName(basicTypeCtx); // <-- ОШИБКА: BasicTypeContext != TypeContext
+                    string baseTypeName = GetBasicTypeName(basicTypeCtx); // <-- НОВЫЙ МЕТОД
+                                                                          // Подсчитываем количество [] в arrayCreatorRest
+                    int dimensions = CountArrayDimensions(arrayCreatorRest);
+                    // Формируем имя типа массива, например, "int[][]"
+                    return baseTypeName + new string('[', dimensions) + new string(']', dimensions);
+                }
+            }
+            // Проверяем создание массива из созданного имени (класса)
+            else if (creator is JavaGrammarParser.ArrayCreatorFromClassContext arrayCreatorClass)
+            {
+                var createdName = arrayCreatorClass.createdName();
+                var arrayCreatorRest = arrayCreatorClass.arrayCreatorRest();
+
+                if (createdName != null && arrayCreatorRest != null)
+                {
+                    // Извлекаем имя типа из createdName
+                    string baseTypeName = GetCreatedNameTypeName(createdName); // Нужно реализовать
+                    int dimensions = CountArrayDimensions(arrayCreatorRest);
+                    return baseTypeName + new string('[', dimensions) + new string(']', dimensions);
+                }
+            }
+            // Проверяем создание класса (не массива)
+            else if (creator is JavaGrammarParser.ClassCreatorContext classCreator)
+            {
+                var createdName = classCreator.createdName();
+                if (createdName != null)
+                {
+                    return GetCreatedNameTypeName(createdName); // Вернуть имя класса
+                }
+            }
+
+            // Если не подошло ни одно правило, возвращаем unknown
+            return "unknown";
+        }
+
+        // Новый метод для получения имени базового типа
+        private string GetBasicTypeName(JavaGrammarParser.BasicTypeContext basicTypeCtx)
+        {
+            if (basicTypeCtx == null) return "unknown";
+
+            // Получаем первый (и единственный) дочерний токен
+            var token = basicTypeCtx.Start; // Это может быть не совсем то, что нужно для дочернего токена
+                                            // Лучше получить дочерний элемент напрямую
+            var child = basicTypeCtx.GetChild(0); // Получаем первый дочерний элемент
+
+            if (child is ITerminalNode terminalNode)
+            {
+                var tokenType = terminalNode.Symbol.Type;
+                string text = terminalNode.GetText();
+                switch (text.ToLower())
+                {
+                    case "byte":
+                        return "byte";
+                    case "short":
+                        return "short";
+                    case "char":
+                        return "char";
+                    case "int":
+                        return "int";
+                    case "long":
+                        return "long";
+                    case "float":
+                        return "float";
+                    case "double":
+                        return "double";
+                    case "boolean":
+                        return "boolean";
+                    default:
+                        return "unknown";
+                }
+            }
+
+            // Если дочерний элемент не является терминалом (что маловероятно для basicType), вернуть unknown
+            return "unknown";
+        }
+
+        // Вспомогательный метод для подсчёта размерности массива в arrayCreatorRest
+        private int CountArrayDimensions(JavaGrammarParser.ArrayCreatorRestContext arrayCreatorRest)
+        {
+            if (arrayCreatorRest == null) return 0;
+
+            // Подсчитываем количество LBRACK (открывающих квадратных скобок)
+            // Это работает для обеих альтернатив arrayCreatorRest
+            int dimensionCount = 0;
+
+            // ANTLR позволяет получить список токенов LBRACK
+            var lbrackTokens = arrayCreatorRest.GetTokens(JavaGrammarParser.LBRACK);
+            if (lbrackTokens != null)
+            {
+                dimensionCount += lbrackTokens.Count();
+            }
+
+            return dimensionCount;
+        }
+
+        // Вспомогательный метод для получения имени типа из createdName
+        // createdName: identifier typeArgumentsOrDiamond? (DOT identifier typeArgumentsOrDiamond?)*
+        private string GetCreatedNameTypeName(JavaGrammarParser.CreatedNameContext createdName)
+        {
+            if (createdName == null) return "unknown";
+
+            // Для простоты, возьмём только первый идентификатор (имя класса)
+            // В реальности, это может быть полное имя типа (com.example.MyClass)
+            // и нужно учитывать обобщения (generics), но для базового случая:
+            var firstId = createdName.identifier(0); // Первый идентификатор
+            if (firstId != null)
+            {
+                string typeName = firstId.GetText();
+
+                // Проверим, является ли это именем класса, известным системе
+                if (_symbolTable.IsClass(typeName))
+                {
+                    return typeName;
+                }
+                // Или проверим стандартные классы
+                // IsClass уже включает стандартные
+                // if (_symbolTable.IsClass(typeName)) { ... }
+                return typeName; // Возвращаем имя, даже если IsClass не знает о нём (пока)
             }
 
             return "unknown";
@@ -1230,37 +1412,16 @@ namespace TranslatorLibrary.SemanticAnalyzer
                         var formalParamDecls = formalParams.formalParameterDecls();
                         if (formalParamDecls != null)
                         {
-                            // --- ИСПРАВЛЕНИЕ ---
-                            // Получаем базовый тип параметра (например, "String")
-                            string baseParamType = GetTypeName(formalParamDecls.type());
+                            // --- УПРОЩЁННАЯ ПРОВЕРКА ---
+                            // Получаем полный тип параметра (например, "String[]")
+                            string fullParamType = GetTypeName(formalParamDecls.type());
 
-                            // Проверяем, является ли базовый тип "String"
-                            bool isStringType = baseParamType.Trim().Equals("String", StringComparison.OrdinalIgnoreCase) ||
-                                               baseParamType.Trim().Equals("java.lang.String", StringComparison.OrdinalIgnoreCase);
-
-                            // Проверяем, что параметр является массивом (имеет размерности [])
-                            // LBRACK/RBRACK находятся в том же контексте, что и базовый тип (ReferenceTypeTypeContext или BasicTypeTypeContext)
-                            // Проверим, есть ли LBRACK в formalParamDecls.type()
-                            bool isArray = false;
-                            var typeCtx = formalParamDecls.type();
-                            if (typeCtx is JavaGrammarParser.ReferenceTypeTypeContext refTypeCtx)
-                            {
-                                // LBRACK может быть в ReferenceTypeTypeContext
-                                isArray = refTypeCtx.LBRACK() != null && refTypeCtx.LBRACK().Length > 0;
-                            }
-                            // Если typeCtx - BasicTypeTypeContext, проверка LBRACK там невозможна, так как BasicType не может быть массивом напрямую.
-                            // else if (typeCtx is JavaGrammarParser.BasicTypeTypeContext basicTypeCtx)
-                            // {
-                            //     isArray = basicTypeCtx.LBRACK() != null && basicTypeCtx.LBRACK().Length > 0;
-                            //     // Это маловероятно, так как int[] не может быть параметром main.
-                            // }
-
-                            // Проверяем, что базовый тип String И массивность есть
-                            if (!isStringType || !isArray)
+                            // Проверяем, является ли полный тип "String[]"
+                            if (fullParamType != "String[]")
                             {
                                 ReportError("Main method parameter must be of type String[]", context);
                             }
-                            // --- КОНЕЦ ИСПРАВЛЕНИЯ ---
+                            // --- КОНЕЦ УПРОЩЁННОЙ ПРОВЕРКИ ---
 
                             // Проверяем имя параметра (необязательно для семантики, но можно проверить стилю)
                             var paramRest = formalParamDecls.formalParameterDeclsRest();

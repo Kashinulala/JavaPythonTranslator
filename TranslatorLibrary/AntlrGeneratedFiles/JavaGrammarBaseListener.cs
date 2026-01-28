@@ -1242,17 +1242,47 @@ public partial class JavaGrammarBaseListener : IJavaGrammarListener {
 	/// <param name="context">The parse tree.</param>
 	public virtual void ExitTypeArgumentsOrDiamond([NotNull] JavaGrammarParser.TypeArgumentsOrDiamondContext context) { }
 	/// <summary>
-	/// Enter a parse tree produced by <see cref="JavaGrammarParser.creator"/>.
+	/// Enter a parse tree produced by the <c>ClassCreator</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.creator"/>.
 	/// <para>The default implementation does nothing.</para>
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
-	public virtual void EnterCreator([NotNull] JavaGrammarParser.CreatorContext context) { }
+	public virtual void EnterClassCreator([NotNull] JavaGrammarParser.ClassCreatorContext context) { }
 	/// <summary>
-	/// Exit a parse tree produced by <see cref="JavaGrammarParser.creator"/>.
+	/// Exit a parse tree produced by the <c>ClassCreator</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.creator"/>.
 	/// <para>The default implementation does nothing.</para>
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
-	public virtual void ExitCreator([NotNull] JavaGrammarParser.CreatorContext context) { }
+	public virtual void ExitClassCreator([NotNull] JavaGrammarParser.ClassCreatorContext context) { }
+	/// <summary>
+	/// Enter a parse tree produced by the <c>ArrayCreatorFromClass</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.creator"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void EnterArrayCreatorFromClass([NotNull] JavaGrammarParser.ArrayCreatorFromClassContext context) { }
+	/// <summary>
+	/// Exit a parse tree produced by the <c>ArrayCreatorFromClass</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.creator"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void ExitArrayCreatorFromClass([NotNull] JavaGrammarParser.ArrayCreatorFromClassContext context) { }
+	/// <summary>
+	/// Enter a parse tree produced by the <c>ArrayCreatorFromBasicType</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.creator"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void EnterArrayCreatorFromBasicType([NotNull] JavaGrammarParser.ArrayCreatorFromBasicTypeContext context) { }
+	/// <summary>
+	/// Exit a parse tree produced by the <c>ArrayCreatorFromBasicType</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.creator"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void ExitArrayCreatorFromBasicType([NotNull] JavaGrammarParser.ArrayCreatorFromBasicTypeContext context) { }
 	/// <summary>
 	/// Enter a parse tree produced by <see cref="JavaGrammarParser.createdName"/>.
 	/// <para>The default implementation does nothing.</para>

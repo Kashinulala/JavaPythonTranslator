@@ -1010,7 +1010,8 @@ public partial class JavaGrammarBaseVisitor<Result> : AbstractParseTreeVisitor<R
 	/// <return>The visitor result.</return>
 	public virtual Result VisitTypeArgumentsOrDiamond([NotNull] JavaGrammarParser.TypeArgumentsOrDiamondContext context) { return VisitChildren(context); }
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="JavaGrammarParser.creator"/>.
+	/// Visit a parse tree produced by the <c>ClassCreator</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.creator"/>.
 	/// <para>
 	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
 	/// on <paramref name="context"/>.
@@ -1018,7 +1019,29 @@ public partial class JavaGrammarBaseVisitor<Result> : AbstractParseTreeVisitor<R
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	public virtual Result VisitCreator([NotNull] JavaGrammarParser.CreatorContext context) { return VisitChildren(context); }
+	public virtual Result VisitClassCreator([NotNull] JavaGrammarParser.ClassCreatorContext context) { return VisitChildren(context); }
+	/// <summary>
+	/// Visit a parse tree produced by the <c>ArrayCreatorFromClass</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.creator"/>.
+	/// <para>
+	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
+	/// on <paramref name="context"/>.
+	/// </para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	public virtual Result VisitArrayCreatorFromClass([NotNull] JavaGrammarParser.ArrayCreatorFromClassContext context) { return VisitChildren(context); }
+	/// <summary>
+	/// Visit a parse tree produced by the <c>ArrayCreatorFromBasicType</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.creator"/>.
+	/// <para>
+	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
+	/// on <paramref name="context"/>.
+	/// </para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	public virtual Result VisitArrayCreatorFromBasicType([NotNull] JavaGrammarParser.ArrayCreatorFromBasicTypeContext context) { return VisitChildren(context); }
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="JavaGrammarParser.createdName"/>.
 	/// <para>

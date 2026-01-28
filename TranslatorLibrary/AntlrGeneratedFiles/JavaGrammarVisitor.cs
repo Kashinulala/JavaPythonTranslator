@@ -635,11 +635,26 @@ public interface IJavaGrammarVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitTypeArgumentsOrDiamond([NotNull] JavaGrammarParser.TypeArgumentsOrDiamondContext context);
 	/// <summary>
-	/// Visit a parse tree produced by <see cref="JavaGrammarParser.creator"/>.
+	/// Visit a parse tree produced by the <c>ClassCreator</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.creator"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
 	/// <return>The visitor result.</return>
-	Result VisitCreator([NotNull] JavaGrammarParser.CreatorContext context);
+	Result VisitClassCreator([NotNull] JavaGrammarParser.ClassCreatorContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>ArrayCreatorFromClass</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.creator"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitArrayCreatorFromClass([NotNull] JavaGrammarParser.ArrayCreatorFromClassContext context);
+	/// <summary>
+	/// Visit a parse tree produced by the <c>ArrayCreatorFromBasicType</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.creator"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitArrayCreatorFromBasicType([NotNull] JavaGrammarParser.ArrayCreatorFromBasicTypeContext context);
 	/// <summary>
 	/// Visit a parse tree produced by <see cref="JavaGrammarParser.createdName"/>.
 	/// </summary>

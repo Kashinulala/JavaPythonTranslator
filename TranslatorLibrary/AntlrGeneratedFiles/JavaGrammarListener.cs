@@ -1051,15 +1051,41 @@ public interface IJavaGrammarListener : IParseTreeListener {
 	/// <param name="context">The parse tree.</param>
 	void ExitTypeArgumentsOrDiamond([NotNull] JavaGrammarParser.TypeArgumentsOrDiamondContext context);
 	/// <summary>
-	/// Enter a parse tree produced by <see cref="JavaGrammarParser.creator"/>.
+	/// Enter a parse tree produced by the <c>ClassCreator</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.creator"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
-	void EnterCreator([NotNull] JavaGrammarParser.CreatorContext context);
+	void EnterClassCreator([NotNull] JavaGrammarParser.ClassCreatorContext context);
 	/// <summary>
-	/// Exit a parse tree produced by <see cref="JavaGrammarParser.creator"/>.
+	/// Exit a parse tree produced by the <c>ClassCreator</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.creator"/>.
 	/// </summary>
 	/// <param name="context">The parse tree.</param>
-	void ExitCreator([NotNull] JavaGrammarParser.CreatorContext context);
+	void ExitClassCreator([NotNull] JavaGrammarParser.ClassCreatorContext context);
+	/// <summary>
+	/// Enter a parse tree produced by the <c>ArrayCreatorFromClass</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.creator"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterArrayCreatorFromClass([NotNull] JavaGrammarParser.ArrayCreatorFromClassContext context);
+	/// <summary>
+	/// Exit a parse tree produced by the <c>ArrayCreatorFromClass</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.creator"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitArrayCreatorFromClass([NotNull] JavaGrammarParser.ArrayCreatorFromClassContext context);
+	/// <summary>
+	/// Enter a parse tree produced by the <c>ArrayCreatorFromBasicType</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.creator"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterArrayCreatorFromBasicType([NotNull] JavaGrammarParser.ArrayCreatorFromBasicTypeContext context);
+	/// <summary>
+	/// Exit a parse tree produced by the <c>ArrayCreatorFromBasicType</c>
+	/// labeled alternative in <see cref="JavaGrammarParser.creator"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitArrayCreatorFromBasicType([NotNull] JavaGrammarParser.ArrayCreatorFromBasicTypeContext context);
 	/// <summary>
 	/// Enter a parse tree produced by <see cref="JavaGrammarParser.createdName"/>.
 	/// </summary>
