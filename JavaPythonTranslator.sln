@@ -5,7 +5,7 @@ VisualStudioVersion = 17.12.35707.178
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JavaPythonTranslator", "JavaPythonTranslator\JavaPythonTranslator.csproj", "{3CE1C94A-8ED9-467A-9901-50205F7DC5F7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LexerParserLibrary", "LexerParserLibrary\LexerParserLibrary.csproj", "{37CC01A6-168E-4E90-8538-AC8AB74904D0}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TranslatorLibrary", "LexerParserLibrary\TranslatorLibrary.csproj", "{37CC01A6-168E-4E90-8538-AC8AB74904D0}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleAppTest", "ConsoleAppTest\ConsoleAppTest.csproj", "{A98E90C9-33CF-4B70-9562-926967B0C362}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -34,5 +34,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {E78447B1-B6DC-4451-880E-4AB904F48463}
 	EndGlobalSection
 EndGlobal

@@ -7,7 +7,7 @@ public class SimpleJavaExample {
         boolean condition = true;
         String message = "Hello from Java!";
 
-        if ((x < y) || condition) {
+        if (x < y) {
             result = x + y;
             System.out.println(message);
             System.out.println("The sum is: " + result);

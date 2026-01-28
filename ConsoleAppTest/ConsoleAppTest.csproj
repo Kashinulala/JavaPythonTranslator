@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\LexerParserLibrary\LexerParserLibrary.csproj" />
+    <ProjectReference Include="..\LexerParserLibrary\TranslatorLibrary.csproj" />
   </ItemGroup>
 
 </Project>
