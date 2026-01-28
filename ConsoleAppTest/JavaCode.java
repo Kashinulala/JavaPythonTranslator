@@ -19,8 +19,6 @@ public class SimpleJavaExample {
             System.out.println("The difference is: " + result);
         }
 
-        int x = 10;
-        boolean condition = true;
         switch (x) {
             case condition:
                 System.out.println(result + 1);

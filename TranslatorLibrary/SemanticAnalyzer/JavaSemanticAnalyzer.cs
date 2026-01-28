@@ -8,6 +8,7 @@ namespace TranslatorLibrary.SemanticAnalyzer
         private readonly List<SemanticException> _errors = new List<SemanticException>();
         private readonly List<SemanticException> _warnings = new List<SemanticException>();
         private readonly Stack<ContextType> _contextStack = new Stack<ContextType>();
+        private string _currentSwitchType = null;
         private enum ContextType
         {
             Loop,
@@ -450,7 +451,11 @@ namespace TranslatorLibrary.SemanticAnalyzer
         public override object VisitSwitchStatement(JavaGrammarParser.SwitchStatementContext context)
         {
             // Входим в контекст switch
-            _contextStack.Push(ContextType.Switch); // или Push(BreakContextType.Switch);
+            _contextStack.Push(ContextType.Switch);
+
+            // Запоминаем тип выражения switch
+            string oldSwitchType = _currentSwitchType; // Сохраняем предыдущее состояние (на случай вложенных switch)
+            _currentSwitchType = null;
 
             try
             {
@@ -459,11 +464,14 @@ namespace TranslatorLibrary.SemanticAnalyzer
                 if (selectorExpr != null)
                 {
                     string selectorType = GetExpressionType(selectorExpr);
+                    _currentSwitchType = selectorType; // Сохраняем тип
+
                     // Проверьте, является ли selectorType допустимым для switch (int, String, enum, и т.д.)
-                    // ReportError, если тип недопустим
                     if (!IsSwitchableType(selectorType))
                     {
                         ReportError($"Switch expression must be of integral or String type, found: {selectorType}", context);
+                        // Устанавливаем тип в null, чтобы не проверять case с недопустимым switch
+                        _currentSwitchType = null;
                     }
                 }
 
@@ -475,11 +483,127 @@ namespace TranslatorLibrary.SemanticAnalyzer
             }
             finally
             {
+                // Восстанавливаем старый тип switch (или null)
+                _currentSwitchType = oldSwitchType;
                 // Выходим из контекста switch
                 _contextStack.Pop();
             }
 
-            return null; // или base.VisitSwitchStatement(context), если нужно, но обычно нет
+            return null;
+        }
+
+        public override object VisitSwitchLabels(JavaGrammarParser.SwitchLabelsContext context)
+        {
+            // Обрабатываем каждую метку в группе
+            for (int i = 0; i < context.ChildCount; i++)
+            {
+                var child = context.GetChild(i);
+                if (child is JavaGrammarParser.SwitchLabelContext switchLabelCtx)
+                {
+                    Visit(switchLabelCtx); // Это вызовет VisitCaseExprLabel, VisitCaseEnumLabel или VisitDefaultLabel
+                }
+            }
+
+            // Не вызываем base.VisitSwitchLabels(context)
+            // return base.VisitSwitchLabels(context); // <-- УБРАТЬ
+            return null;
+        }
+
+        public override object VisitCaseExprLabel(JavaGrammarParser.CaseExprLabelContext context)
+        {
+            // Проверяем выражение в case (например, condition или "")
+            var caseExpr = context.expression();
+            if (caseExpr != null && _currentSwitchType != null) // Убедимся, что тип switch известен
+            {
+                string caseExprType = GetExpressionType(caseExpr);
+
+                // Проверяем, совместимы ли типы switch и case
+                if (!AreCaseAndSwitchTypesCompatible(_currentSwitchType, caseExprType))
+                {
+                    ReportError($"Type mismatch: cannot convert from '{caseExprType}' to switch type '{_currentSwitchType}'", caseExpr);
+                }
+                // TODO: Проверить, является ли caseExpr константой времени компиляции
+            }
+
+            // Продолжаем обход остальной части группы (statementGroup)
+            return base.VisitCaseExprLabel(context);
+        }
+
+        public override object VisitDefaultLabel(JavaGrammarParser.DefaultLabelContext context)
+        {
+            // Для default не нужно проверять тип
+            return base.VisitDefaultLabel(context);
+        }
+
+        public override object VisitSwitchBlockStatementGroup(JavaGrammarParser.SwitchBlockStatementGroupContext context)
+        {
+            // Обрабатываем метки (case/default)
+            if (context.switchLabels() != null)
+            {
+                Visit(context.switchLabels()); // Это вызовет VisitCaseExprLabel и т.д.
+            }
+
+            // Обрабатываем тело группы (statement)
+            var blockStatementsCtx = context.blockStatements();
+            if (blockStatementsCtx != null)
+            {
+                // Получаем количество дочерних blockStatement
+                int statementCount = blockStatementsCtx.blockStatement().Length;
+                for (int i = 0; i < statementCount; i++)
+                {
+                    var stmt = blockStatementsCtx.blockStatement(i);
+                    Visit(stmt);
+                }
+            }
+
+            // Не вызываем base.VisitSwitchBlockStatementGroup(context)
+            // return base.VisitSwitchBlockStatementGroup(context); // <-- УБРАТЬ
+            return null;
+        }
+
+        private bool AreCaseAndSwitchTypesCompatible(string switchType, string caseType)
+        {
+            if (string.IsNullOrEmpty(switchType) || string.IsNullOrEmpty(caseType))
+                return false;
+
+            // Приводим к нижнему регистру для сравнения
+            switchType = switchType.ToLower();
+            caseType = caseType.ToLower();
+
+            // Проверка на String
+            if (switchType == "string")
+            {
+                return caseType == "string";
+            }
+
+            // Проверка на числовые типы
+            var numericTypes = new HashSet<string> { "byte", "short", "int", "char" };
+            if (numericTypes.Contains(switchType) && numericTypes.Contains(caseType))
+            {
+
+                var hierarchy = new[] { "byte", "short", "char", "int", "long", "float", "double" };
+                int switchIdx = Array.IndexOf(hierarchy, switchType);
+                int caseIdx = Array.IndexOf(hierarchy, caseType);
+                var allowedForInt = new HashSet<string> { "byte", "short", "char", "int" };
+                var allowedForShort = new HashSet<string> { "byte", "short" };
+                var allowedForByte = new HashSet<string> { "byte" };
+                var allowedForChar = new HashSet<string> { "char" };
+
+                switch (switchType)
+                {
+                    case "int":
+                        return allowedForInt.Contains(caseType);
+                    case "short":
+                        return allowedForShort.Contains(caseType);
+                    case "byte":
+                        return allowedForByte.Contains(caseType);
+                    case "char":
+                        return allowedForChar.Contains(caseType);
+                    default:
+                        return false;
+                }
+            }
+            return switchType == caseType;
         }
 
         private bool IsSwitchableType(string type)
