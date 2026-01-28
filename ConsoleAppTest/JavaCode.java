@@ -6,17 +6,28 @@ public class SimpleJavaExample {
         double result = 0;
         boolean condition = true;
         String message = "Hello from Java!";
+        System.out.println("The sum is: " + x);
+        
 
         if (x < y) {
             result = x + y;
             System.out.println(message);
             System.out.println("The sum is: " + result);
         } else {
+            
             result = x - y;
             System.out.println("The difference is: " + result);
         }
 
         for (int i = 0; i < 3; i++) {
+            
+            System.out.println("Loop iteration: " + i);
+        }
+
+        
+
+        while (condition) {
+            int z = q;
             System.out.println("Loop iteration: " + i);
         }
     }

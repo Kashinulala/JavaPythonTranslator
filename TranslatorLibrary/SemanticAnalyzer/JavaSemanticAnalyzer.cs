@@ -156,45 +156,77 @@ namespace TranslatorLibrary.SemanticAnalyzer
         // Анализ выражений присваивания
         public override object VisitAssignmentExpression(JavaGrammarParser.AssignmentExpressionContext context)
         {
-            var left = context.expression(0);
-            string varName = null;
-
-            // Извлечение имени переменной из левой части присваивания
-            if (left is JavaGrammarParser.PrimaryExpressionContext primaryExpr)
+            var expressions = context.expression();
+            if (expressions != null && expressions.Length >= 2)
             {
-                var expr1 = primaryExpr.expression1();
-                if (expr1 != null)
+                var leftSide = expressions[0]; // z
+                var rightSide = expressions[1]; // q
+
+                // --- Проверка левой части через GetExpressionType ---
+                string leftType = GetExpressionType(leftSide); // <-- Это вызовет GetPostfixExpressionType, который вызовет GetSymbol
+
+                if (leftType == "unknown")
                 {
-                    if (expr1 is JavaGrammarParser.SimpleExpression2Context simpleExpr2)
+                    // Это означает, что переменная слева не найдена в SymbolTable
+                    // Попробуем извлечь имя для сообщения об ошибке
+                    string varName = TryGetIdentifierName(leftSide);
+                    if (!string.IsNullOrEmpty(varName))
                     {
-                        var expr2 = simpleExpr2.expression2();
-                        if (expr2 is JavaGrammarParser.PostfixExpressionContext postfixExpr)
+                        ReportError($"Variable '{varName}' is not declared", leftSide);
+                    }
+                    else
+                    {
+                        ReportError("Left side of assignment is not a valid variable or is not declared", leftSide);
+                    }
+                    // Не возвращаемся сразу, чтобы проанализировать правую часть и получить все ошибки
+                }
+                // Проверка на IsFinal и IsInitialized через GetSymbol (если нужно, но это сложнее с GetExpressionType)
+                // Лучше оставить это как отдельную проверку, если leftType != "unknown"
+                else
+                {
+                    // Левая сторона объявлена, теперь проверим, является ли она final
+                    string varName = TryGetIdentifierName(leftSide);
+                    if (!string.IsNullOrEmpty(varName))
+                    {
+                        var symbol = _symbolTable.GetSymbol(varName);
+                        if (symbol != null && symbol.IsFinal && symbol.IsInitialized)
                         {
-                            var primary = postfixExpr.primary();
-                            if (primary is JavaGrammarParser.IdentifierPrimaryContext idPrimary &&
-                                idPrimary.identifier().Length > 0)
-                            {
-                                varName = idPrimary.identifier()[0].GetText();
-                            }
+                            ReportError($"Final variable '{varName}' cannot be reassigned", leftSide);
+                            // Не возвращаемся сразу, чтобы проанализировать правую часть
                         }
+                    }
+                }
+
+                // --- Проверка правой части ---
+                string rightType = GetExpressionType(rightSide);
+
+                if (rightType == "unknown")
+                {
+                    string rightName = TryGetIdentifierName(rightSide);
+                    if (!string.IsNullOrEmpty(rightName))
+                    {
+                        ReportError($"Variable '{rightName}' is not declared", rightSide);
+                    }
+                    else
+                    {
+                        ReportError($"Right side of assignment has unknown type", rightSide);
+                    }
+                }
+
+                // --- Проверка совместимости типов ---
+                // Проверяем только если оба типа известны
+                if (leftType != "unknown" && rightType != "unknown")
+                {
+                    if (!AreTypesCompatible(leftType, rightType))
+                    {
+                        string leftExprText = leftSide.GetText();
+                        string rightExprText = rightSide.GetText();
+                        ReportError($"Cannot assign '{rightType}' to '{leftType}' (from '{rightExprText}' to '{leftExprText}')", context);
                     }
                 }
             }
 
-            if (varName != null)
-            {
-                var symbol = _symbolTable.GetSymbol(varName);
-                if (symbol == null)
-                {
-                    ReportError($"Variable '{varName}' is not declared", left);
-                }
-                else if (symbol.IsFinal && symbol.IsInitialized)
-                {
-                    ReportError($"Final variable '{varName}' cannot be reassigned", left);
-                }
-            }
-
-            return base.VisitAssignmentExpression(context);
+            return null; // или return VisitChildren(context); если нужно продолжить обход
         }
 
         // Анализ инфиксных выражений (арифметические и логические операторы)
@@ -356,6 +388,23 @@ namespace TranslatorLibrary.SemanticAnalyzer
             return base.VisitWhileStatement(context);
         }
 
+        public override object VisitDoWhileStatement(JavaGrammarParser.DoWhileStatementContext context)
+        {
+            // Выполняем свою проверку условия
+            var conditionExpr = context.parExpression().expression();
+            if (conditionExpr != null)
+            {
+                string conditionType = GetExpressionType(conditionExpr);
+                if (conditionType != "boolean")
+                {
+                    ReportError($"Do-while condition must be of boolean type, found: {conditionType}", context);
+                }
+            }
+
+            // Позволяем ANTLR самому обойти тело и условие
+            return base.VisitDoWhileStatement(context); // <-- Вызываем base, но НЕ вызываем Visit(context.statement()) вручную
+        }
+
         // Анализ оператора switch
         public override object VisitSwitchStatement(JavaGrammarParser.SwitchStatementContext context)
         {
@@ -393,19 +442,66 @@ namespace TranslatorLibrary.SemanticAnalyzer
         {
             if (context == null) return "unknown";
 
-            // ExpressionContext может быть AssignmentExpressionContext или PrimaryExpressionContext
             if (context is JavaGrammarParser.AssignmentExpressionContext assignmentExpr)
             {
                 // Тип присваивания - тип правой части (последнего выражения в списке, если их несколько)
                 var expressions = assignmentExpr.expression();
                 if (expressions != null && expressions.Length > 0)
                 {
-                    // Правая часть присваивания - это последний элемент в массиве expression()
-                    // assignmentExpr.expression(0) - левая часть
-                    // assignmentExpr.expression(1) - правая часть (для ASSIGN)
-                    if (expressions.Length >= 2)
+                    if (expressions.Length >= 2) // assignmentExpr = left = right
                     {
-                        return GetExpressionType(expressions[expressions.Length - 1]);
+                        // expressions[0] = left (l-value), expressions[1] = right (r-value)
+                        string leftType = GetExpressionType(expressions[0]); // Тип переменной слева (z)
+                        string rightType = GetExpressionType(expressions[expressions.Length - 1]); // Тип выражения справа (q)
+
+                        // Проверяем, что левая часть - это допустимая переменная для присваивания
+                        // Это может быть сложнее, но на простом уровне проверим, не "unknown" ли тип (значит, переменная не найдена)
+                        if (leftType == "unknown")
+                        {
+                            // Это означает, что переменная слева не найдена в SymbolTable
+                            // Нужно получить имя переменной из expressions[0] для сообщения об ошибке
+                            // Это требует дополнительного анализа выражения.
+                            // Упрощённо: попробуем получить имя из IdentifierPrimary, если это простой идентификатор
+                            string varName = TryGetIdentifierName(expressions[0]); // Вспомогательный метод
+                            if (!string.IsNullOrEmpty(varName))
+                            {
+                                ReportError($"Variable '{varName}' is not declared", assignmentExpr);
+                            }
+                            else
+                            {
+                                ReportError($"Left side of assignment is not a valid variable", assignmentExpr);
+                            }
+                            return "unknown"; // Возвращаем unknown как ошибка
+                        }
+
+                        // Проверяем, что правая часть - это допустимое выражение
+                        if (rightType == "unknown")
+                        {
+                            // Это означает, что выражение справа (или его часть) не удалось проанализировать
+                            // Часто это означает, что переменная не объявлена
+                            string varName = TryGetIdentifierName(expressions[expressions.Length - 1]); // Попробуем имя из правой части
+                            if (!string.IsNullOrEmpty(varName))
+                            {
+                                ReportError($"Variable '{varName}' is not declared", assignmentExpr);
+                            }
+                            else
+                            {
+                                ReportError($"Right side of assignment has unknown type", assignmentExpr);
+                            }
+                            return "unknown"; // Возвращаем unknown как ошибка
+                        }
+
+                        // Проверяем совместимость типов
+                        if (!AreTypesCompatible(leftType, rightType))
+                        {
+                            string leftExprText = expressions[0].GetText(); // Имя переменной или выражение слева
+                            string rightExprText = expressions[expressions.Length - 1].GetText(); // Выражение справа
+                            ReportError($"Cannot assign '{rightType}' to '{leftType}' (from '{rightExprText}' to '{leftExprText}')", assignmentExpr);
+                            return "unknown"; // Возвращаем unknown как ошибка
+                        }
+
+                        // Если все проверки пройдены, возвращаем тип правой части
+                        return rightType; // Или, если нужно тип l-value, то leftType
                     }
                     else if (expressions.Length == 1)
                     {
@@ -418,7 +514,6 @@ namespace TranslatorLibrary.SemanticAnalyzer
                 }
                 return "unknown";
             }
-            // Проверяем PrimaryExpression (это основной случай для выражений, не являющихся присваиванием)
             else if (context is JavaGrammarParser.PrimaryExpressionContext primaryExpr)
             {
                 var expr1 = primaryExpr.expression1();
@@ -429,6 +524,35 @@ namespace TranslatorLibrary.SemanticAnalyzer
             }
 
             return "unknown";
+        }
+
+        // Вспомогательный метод для извлечения имени идентификатора из простого выражения
+        // Это упрощение и может не работать для сложных выражений вроде arr[index] = value
+        private string TryGetIdentifierName(JavaGrammarParser.ExpressionContext expr)
+        {
+            // Пробуем найти IdentifierPrimaryContext в выражении
+            // Это работает для простого идентификатора
+            if (expr is JavaGrammarParser.PrimaryExpressionContext primExpr)
+            {
+                var expr1 = primExpr.expression1();
+                if (expr1 is JavaGrammarParser.SimpleExpression2Context simpleExpr2)
+                {
+                    var expr2 = simpleExpr2.expression2();
+                    if (expr2 is JavaGrammarParser.PostfixExpressionContext postfixExpr)
+                    {
+                        var primary = postfixExpr.primary();
+                        if (primary is JavaGrammarParser.IdentifierPrimaryContext idPrimary)
+                        {
+                            if (idPrimary.identifier().Length > 0)
+                            {
+                                return idPrimary.identifier()[0].GetText();
+                            }
+                        }
+                    }
+                }
+            }
+            // Можно добавить больше проверок для других типов выражений, если нужно
+            return null; // Не удалось извлечь имя
         }
 
         private string GetExpression1Type(JavaGrammarParser.Expression1Context expr1)
@@ -789,15 +913,30 @@ namespace TranslatorLibrary.SemanticAnalyzer
             // Проверка числовых типов
             if (IsNumericType(type1) && IsNumericType(type2))
             {
-                // Позволяем приведение от меньшего к большему
+                // Определяем иерархию числовых типов (от "меньшего" к "большему")
                 var numericOrder = new[] { "byte", "short", "int", "long", "float", "double" };
-                int idx1 = Array.IndexOf(numericOrder, type1.ToLower());
-                int idx2 = Array.IndexOf(numericOrder, type2.ToLower());
-                return idx1 >= 0 && idx2 >= 0 && Math.Max(idx1, idx2) <= Math.Max(idx1, idx2);
+                int targetIdx = Array.IndexOf(numericOrder, type1.ToLower()); // Индекс типа переменной (куда присваиваем)
+                int sourceIdx = Array.IndexOf(numericOrder, type2.ToLower()); // Индекс типа инициализатора (что присваиваем)
+
+                if (targetIdx >= 0 && sourceIdx >= 0)
+                {
+                    return sourceIdx <= targetIdx;
+                }
+                return false;
             }
 
-            // Проверка для коллекций
-            return IsCollectionType(type1) && IsCollectionType(type2);
+            // Проверка для коллекций (оставляем как есть или модифицируем по необходимости)
+            // ВНИМАНИЕ: IsCollectionType(type1) && IsCollectionType(type2) также возвращает true,
+            // если оба типа - коллекции, независимо от их конкретных типов (ArrayList vs HashSet).
+            // Возможно, нужна более строгая проверка.
+            // Пока оставим как есть.
+            if (IsCollectionType(type1) && IsCollectionType(type2))
+            {
+                // Здесь можно добавить логику проверки совместимости дженериков или базовых типов
+                return true; // или более сложная проверка
+            }
+
+            return false;
         }
 
         private bool IsValidSwitchType(string type)
