@@ -913,9 +913,32 @@ namespace TranslatorLibrary.SemanticAnalyzer
                 var op = operators[i].GetText();
                 string rightOperandType = GetExpression2Type(operands[i + 1]);
 
+                if (op == "+")
+                {
+                    // Проверяем, является ли один из операндов строкой
+                    if (resultType == "String" || rightOperandType == "String")
+                    {
+                        // Если один из операндов - строка, результат - строка (конкатенация)
+                        resultType = "String";
+                        // Даже если другой операнд - unknown, результат всё равно String
+                        // Это позволяет выражению вроде "str" + unknown быть "String"
+                        // и не вызывать ошибку проверки типов ниже для '+'
+                    }
+                    else
+                    {
+                        // Если оба операнда не строки, проверяем, являются ли они числовыми
+                        if (!IsNumericType(resultType) || !IsNumericType(rightOperandType))
+                        {
+                            ReportError($"Binary operator '{op}' requires numeric operands, found: {resultType} and {rightOperandType}", infixExpr);
+                            return "unknown"; // или булевый тип для совместимости, но ошибка уже сообщена
+                        }
+                        // Результат арифметической операции зависит от типов операндов
+                        resultType = GetArithmeticResultType(resultType, rightOperandType);
+                    }
+                }
                 // Проверяем, совместимы ли типы для данного оператора
                 // Операторы сравнения
-                if (new[] { "<", ">", "<=", ">=", "==", "!=", "&&", "||" }.Contains(op))
+                else if (new[] { "<", ">", "<=", ">=", "==", "!=", "&&", "||" }.Contains(op))
                 {
                     // Проверяем, являются ли оба операнда числовыми для числовых операторов сравнения
                     if (new[] { "<", ">", "<=", ">=", "==", "!=" }.Contains(op))
@@ -939,7 +962,7 @@ namespace TranslatorLibrary.SemanticAnalyzer
                     resultType = "boolean";
                 }
                 // Арифметические/логические/другие бинарные операции
-                else if (new[] { "+", "-", "*", "/", "%", "&", "|", "^", "<<", ">>", ">>>" }.Contains(op))
+                else if (new[] {"-", "*", "/", "%"}.Contains(op))
                 {
                     if (!IsNumericType(resultType) || !IsNumericType(rightOperandType))
                     {
@@ -1095,6 +1118,151 @@ namespace TranslatorLibrary.SemanticAnalyzer
                                 }
                             }
                         }
+                        else if (suffix is JavaGrammarParser.ArgumentsSuffixContext argsSuffix)
+                        {
+                            // Это вызов метода: System.out.println(...)
+
+                            var chain = new List<string>();
+                            for (int i = 0; i < idPrimary.ChildCount; i++)
+                            {
+                                var child = idPrimary.GetChild(i);
+                                if (child is JavaGrammarParser.IdentifierContext idCtx)
+                                {
+                                    chain.Add(idCtx.GetText());
+                                }
+                                // Игнорируем точки и другие токены
+                            }
+
+                            if (chain.Count >= 2)
+                            {
+                                string currentType = "unknown";
+                                bool chainValid = true;
+
+                                // Проходим по всей цепочке, включая последний элемент (метод)
+                                for (int i = 0; i < chain.Count; i++)
+                                {
+                                    string part = chain[i];
+                                    bool isLastElement = (i == chain.Count - 1);
+
+                                    if (i == 0) // Это первый идентификатор (System)
+                                    {
+                                        // Проверяем, является ли это переменной, классом или встроенным типом
+                                        var sym = _symbolTable.GetSymbol(part);
+                                        if (sym != null)
+                                        {
+                                            currentType = sym.Type;
+                                        }
+                                        else if (_symbolTable.IsClass(part))
+                                        {
+                                            currentType = part; // Имя класса
+                                        }
+                                        else if (BuiltInTypes.IsBuiltInType(part))
+                                        {
+                                            currentType = part; // Имя встроенного типа
+                                        }
+                                        else
+                                        {
+                                            ReportError($"'{part}' cannot be resolved to a type", idPrimary);
+                                            chainValid = false;
+                                            break;
+                                        }
+                                    }
+                                    else // Это поле или метод (out, println)
+                                    {
+                                        // currentType - это тип объекта, у которого ищем part
+                                        if (BuiltInTypes.IsBuiltInType(currentType))
+                                        {
+                                            // Это встроенный тип, проверяем поля и методы
+                                            if (isLastElement)
+                                            {
+                                                // Последний элемент - это метод
+                                                if (!BuiltInTypes.HasMethod(currentType, part))
+                                                {
+                                                    ReportError($"Method '{part}' not found in built-in type '{currentType}'", idPrimary);
+                                                    chainValid = false;
+                                                    break;
+                                                }
+                                                // Метод найден. Тип объекта, у которого вызывается метод, установлен.
+                                                // currentType остаётся тем же (например, "PrintStream").
+                                                // Тип результата вызова будет определён ниже.
+                                            }
+                                            else
+                                            {
+                                                // Не последний элемент - это поле
+                                                if (!BuiltInTypes.HasField(currentType, part))
+                                                {
+                                                    ReportError($"Field '{part}' not found in built-in type '{currentType}'", idPrimary);
+                                                    chainValid = false;
+                                                    break;
+                                                }
+                                                // Если поле найдено, обновляем currentType
+                                                currentType = BuiltInTypes.GetFieldType(currentType, part);
+                                            }
+                                        }
+                                        else
+                                        {
+                                            // Это не встроенный тип, проверяем в SymbolTable
+                                            // Это требует реализации отслеживания полей/методов в пользовательских классах
+                                            // Пока что для пользовательских типов можно вернуть ошибку или "unknown"
+                                            ReportError($"Accessing members of non-built-in type '{currentType}' is not fully implemented", idPrimary);
+                                            chainValid = false;
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                if (chainValid)
+                                {
+                                    // Цепочка разрешена, теперь анализируем аргументы метода
+                                    var arguments = argsSuffix.arguments(); // (...)
+                                    var expressionList = arguments.expressionList();
+                                    if (expressionList != null)
+                                    {
+                                        var argExpressions = expressionList.expression(); // ["The sum is: " + xx]
+                                        if (argExpressions != null)
+                                        {
+                                            // АНАЛИЗИРУЕМ АРГУМЕНТЫ
+                                            bool argumentsValid = true;
+                                            foreach (var argExpr in argExpressions)
+                                            {
+                                                string argType = GetExpressionType(argExpr); // <-- ТУТ
+                                                if (argType == "unknown")
+                                                {
+                                                    argumentsValid = false;
+                                                    // ReportError уже должен быть вызван внутри GetExpressionType(argExpr)
+                                                }
+                                            }
+
+                                            if (!argumentsValid)
+                                            {
+                                                return "unknown";
+                                            }
+                                        }
+                                    }
+                                    // Устанавливаем тип результата вызова метода.
+                                    // Получаем информацию о методе (мы знаем, что он существует из HasMethod)
+                                    MethodInfo methodInfo = BuiltInTypes.GetMethodInfo(currentType, chain[chain.Count - 1]); // Имя метода
+                                    if (methodInfo != null)
+                                    {
+                                        primaryType = methodInfo.ReturnType; // Например, "void" для println
+                                    }
+                                    else
+                                    {
+                                        // Теоретически не должно сработать, если HasMethod был true
+                                        primaryType = "unknown";
+                                    }
+                                }
+                                else
+                                {
+                                    primaryType = "unknown";
+                                }
+                            }
+                            else
+                            {
+                                ReportError($"Incomplete method call chain: {idPrimary.GetText()}", idPrimary);
+                                primaryType = "unknown";
+                            }
+                        }
                         else if (suffix is JavaGrammarParser.ClassLiteralSuffixContext classLitSuffix)
                         {
                             // Тип суффикса .class - это Class<?>
@@ -1145,7 +1313,7 @@ namespace TranslatorLibrary.SemanticAnalyzer
                         }
                     }
                 }
-                // Проверяем selector (например, вызовы методов, доступ к полям, доступ к массивам)
+                
                 // Проверяем selector (например, вызовы методов, доступ к полям, доступ к массивам)
                 if (postfixExpr.selector() != null && postfixExpr.selector().Length > 0)
                 {
@@ -1186,7 +1354,7 @@ namespace TranslatorLibrary.SemanticAnalyzer
                                 }
                             }
                         }
-                        // ... (обработка других типов selector: ArgumentsSelector, DotIdentifierSelector) ...
+                        // ... (другие типы selector, если добавятся) ...
                     }
                 }
 
