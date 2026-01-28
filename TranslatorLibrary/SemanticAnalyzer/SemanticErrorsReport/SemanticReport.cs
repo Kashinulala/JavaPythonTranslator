@@ -1,4 +1,8 @@
+<<<<<<<< HEAD:TranslatorLibrary/SemanticAnalyzer/SemanticErrorsReport/SemanticReport.cs
 ﻿namespace TranslatorLibrary.SemanticAnalyzer.SemanticErrorsReport
+========
+﻿namespace TranslatorLibrary.SemanticAnalyzer.SemanticErrorReport
+>>>>>>>> 13d7b904bdfd577efe51ac866aa81f7265d8c7cd:TranslatorLibrary/SemanticAnalyzer/SemanticErrorReport/SemanticReport.cs
 {
     public class SemanticReport
     {
