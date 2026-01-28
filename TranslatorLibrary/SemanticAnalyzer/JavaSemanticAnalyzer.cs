@@ -866,11 +866,17 @@ namespace TranslatorLibrary.SemanticAnalyzer
                     var refType = refTypeCtx.referenceType();
                     if (refType.identifier().Length > 0)
                     {
-                        // Получаем имя класса (MyClass, String, и т.д.)
+                        // --- ПРОВЕРКА СУЩЕСТВОВАНИЯ КЛАССА ---
                         string baseTypeName = refType.identifier()[0].GetText();
-                        // Получаем количество размерностей массива
-                        int dimensionCount = refTypeCtx.LBRACK().Length; // Количество токенов [
-                                                                         // Строим полное имя типа
+                        if (!_symbolTable.IsClass(baseTypeName))
+                        {
+                            // Вызываем ошибку здесь, где есть контекст для отчёта
+                            ReportError($"Class '{baseTypeName}' is not declared", refType.identifier()[0]); // Или refTypeCtx
+                            return "unknown"; // Возвращаем unknown как ошибка
+                        }
+                        // --- КОНЕЦ ПРОВЕРКИ ---
+
+                        int dimensionCount = refTypeCtx.LBRACK().Length;
                         string fullTypeName = baseTypeName + BuildArrayPart(dimensionCount);
                         return fullTypeName;
                     }
@@ -1247,15 +1253,11 @@ namespace TranslatorLibrary.SemanticAnalyzer
             {
                 string typeName = firstId.GetText();
 
-                // Проверим, является ли это именем класса, известным системе
-                if (_symbolTable.IsClass(typeName))
+                if (!_symbolTable.IsClass(typeName))
                 {
-                    return typeName;
+                    return "unknown";
                 }
-                // Или проверим стандартные классы
-                // IsClass уже включает стандартные
-                // if (_symbolTable.IsClass(typeName)) { ... }
-                return typeName; // Возвращаем имя, даже если IsClass не знает о нём (пока)
+                return typeName;
             }
 
             return "unknown";
@@ -1288,13 +1290,24 @@ namespace TranslatorLibrary.SemanticAnalyzer
             if (type1 == null || type2 == null) return false;
             if (type1 == type2) return true;
 
+            // Проверка массивов
+            if (IsArrayType(type1) && IsArrayType(type2))
+            {
+                // Извлекаем базовые типы (без [])
+                string baseType1 = GetBaseTypeFromArray(type1);
+                string baseType2 = GetBaseTypeFromArray(type2);
+
+                // Проверяем совместимость базовых типов
+                return AreTypesCompatible(baseType1, baseType2); // Рекурсивный вызов для базовых типов
+            }
+
             // Проверка числовых типов
             if (IsNumericType(type1) && IsNumericType(type2))
             {
-                // Определяем иерархию числовых типов (от "меньшего" к "большему")
+                // Позволяем приведение от меньшего к большему
                 var numericOrder = new[] { "byte", "short", "int", "long", "float", "double" };
-                int targetIdx = Array.IndexOf(numericOrder, type1.ToLower()); // Индекс типа переменной (куда присваиваем)
-                int sourceIdx = Array.IndexOf(numericOrder, type2.ToLower()); // Индекс типа инициализатора (что присваиваем)
+                int targetIdx = Array.IndexOf(numericOrder, type1.ToLower());
+                int sourceIdx = Array.IndexOf(numericOrder, type2.ToLower());
 
                 if (targetIdx >= 0 && sourceIdx >= 0)
                 {
@@ -1303,25 +1316,32 @@ namespace TranslatorLibrary.SemanticAnalyzer
                 return false;
             }
 
-            // Проверка для коллекций (оставляем как есть или модифицируем по необходимости)
-            // ВНИМАНИЕ: IsCollectionType(type1) && IsCollectionType(type2) также возвращает true,
-            // если оба типа - коллекции, независимо от их конкретных типов (ArrayList vs HashSet).
-            // Возможно, нужна более строгая проверка.
-            // Пока оставим как есть.
-            if (IsCollectionType(type1) && IsCollectionType(type2))
-            {
-                // Здесь можно добавить логику проверки совместимости дженериков или базовых типов
-                return true; // или более сложная проверка
-            }
+            // Проверка для коллекций (если они не массивы)
+            // Убедитесь, что IsCollectionType не возвращает true для T[]
+            // if (IsCollectionType(type1) && IsCollectionType(type2))
+            // {
+            //     // Логика для коллекций
+            //     return true; // или более сложная проверка
+            // }
 
+            // Для остальных типов (классов)
+            // Можно добавить проверку на наследование
             return false;
         }
 
-        private bool IsValidSwitchType(string type)
+        // Вспомогательные методы
+        private bool IsArrayType(string type)
         {
-            if (type == null) return false;
-            type = type.ToLower();
-            return type == "int" || type == "byte" || type == "short" || type == "string";
+            return !string.IsNullOrEmpty(type) && type.EndsWith("[]");
+        }
+
+        private string GetBaseTypeFromArray(string arrayType)
+        {
+            if (IsArrayType(arrayType))
+            {
+                return arrayType.Substring(0, arrayType.Length - 2); // Убираем "[]"
+            }
+            return arrayType; // Если не массив, возвращаем как есть
         }
 
         private void ReportError(string message, ParserRuleContext context)

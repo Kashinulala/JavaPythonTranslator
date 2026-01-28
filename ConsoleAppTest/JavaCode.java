@@ -9,6 +9,7 @@ public class SimpleJavaExample {
         System.out.println("The sum is: " + x);
         int[] a = new int[5];
 
+
         if (!condition) {
             result = x + y;
             System.out.println(message);
