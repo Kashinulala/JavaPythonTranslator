@@ -1,4 +1,4 @@
-﻿namespace LexerParserLibrary.SemanticAnalyzer
+﻿namespace TranslatorLibrary.SemanticAnalyzer
 {
     // Класс для хранения информации о символах
     public class SymbolInfo

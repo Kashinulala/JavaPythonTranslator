@@ -1,4 +1,4 @@
-﻿namespace LexerParserLibrary
+﻿namespace TranslatorLibrary.SemanticAnalyzer.SemanticErrorsReport
 {
     public class SemanticReport
     {

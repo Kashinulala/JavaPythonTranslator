@@ -1,4 +1,4 @@
-﻿namespace LexerParserLibrary.SemanticAnalyzer
+﻿namespace TranslatorLibrary.SemanticAnalyzer
 {
     // Класс таблицы символов для управления областями видимости
     public class SymbolTable

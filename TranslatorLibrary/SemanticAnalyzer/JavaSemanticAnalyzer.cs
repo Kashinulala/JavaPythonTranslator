@@ -1,7 +1,6 @@
 ﻿using Antlr4.Runtime;
-using Antlr4.Runtime.Tree;
 
-namespace LexerParserLibrary.SemanticAnalyzer
+namespace TranslatorLibrary.SemanticAnalyzer
 {
     public class SemanticAnalyzer : JavaGrammarBaseVisitor<object>
     {

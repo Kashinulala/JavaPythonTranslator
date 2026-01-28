@@ -1,4 +1,4 @@
-﻿namespace LexerParserLibrary.SemanticAnalyzer
+﻿namespace TranslatorLibrary.SemanticAnalyzer
 {
     // Исключение для семантических ошибок
     public class SemanticException : Exception

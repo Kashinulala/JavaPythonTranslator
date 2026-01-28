@@ -1,7 +1,6 @@
 ﻿using Antlr4.Runtime;
 using Antlr4.Runtime.Tree;
-using LexerParserLibrary;
-using LexerParserLibrary.SemanticAnalyzer;
+using TranslatorLibrary.SemanticAnalyzer;
 
 string javaCode = File.ReadAllText("../../../JavaCode.java");
 
