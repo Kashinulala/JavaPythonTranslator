@@ -12,7 +12,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\LexerParserLibrary\TranslatorLibrary.csproj" />
     <ProjectReference Include="..\TranslatorLibrary\TranslatorLibrary.csproj" />
   </ItemGroup>
 
