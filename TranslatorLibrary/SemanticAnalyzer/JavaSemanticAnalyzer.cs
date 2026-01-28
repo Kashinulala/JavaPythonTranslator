@@ -9,6 +9,9 @@ namespace TranslatorLibrary.SemanticAnalyzer
         private readonly List<SemanticException> _errors = new List<SemanticException>();
         private readonly List<SemanticException> _warnings = new List<SemanticException>();
         private readonly Stack<ContextType> _contextStack = new Stack<ContextType>();
+        public SymbolTable GetSymbolTable() => _symbolTable;
+        public bool IsInLoop() => _contextStack.Count > 0 && _contextStack.Peek() == ContextType.Loop;
+        public bool IsInSwitch() => _contextStack.Count > 0 && _contextStack.Peek() == ContextType.Switch;
         private string _currentSwitchType = null;
         private enum ContextType
         {
@@ -658,7 +661,7 @@ namespace TranslatorLibrary.SemanticAnalyzer
             return base.VisitNewCreatorPrimary(context);
         }
 
-        private string GetExpressionType(JavaGrammarParser.ExpressionContext context)
+        public string GetExpressionType(JavaGrammarParser.ExpressionContext context)
         {
             if (context == null) return "unknown";
 
