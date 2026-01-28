@@ -7,7 +7,12 @@ namespace TranslatorLibrary.SemanticAnalyzer
         private readonly SymbolTable _symbolTable = new SymbolTable();
         private readonly List<SemanticException> _errors = new List<SemanticException>();
         private readonly List<SemanticException> _warnings = new List<SemanticException>();
-
+        private readonly Stack<ContextType> _contextStack = new Stack<ContextType>();
+        private enum ContextType
+        {
+            Loop,
+            Switch
+        }
         public IEnumerable<SemanticException> Errors => _errors;
         public bool HasErrors => _errors.Count > 0;
         public IEnumerable<SemanticException> Warnings => _warnings;
@@ -375,46 +380,113 @@ namespace TranslatorLibrary.SemanticAnalyzer
         // Анализ цикла while
         public override object VisitWhileStatement(JavaGrammarParser.WhileStatementContext context)
         {
-            var conditionExpr = context.parExpression().expression();
-            if (conditionExpr != null)
+            // Входим в контекст цикла
+            _contextStack.Push(ContextType.Loop); // или Push(BreakContextType.Loop);
+
+            try
             {
-                string conditionType = GetExpressionType(conditionExpr);
-                if (conditionType != "boolean")
+                // Анализ условия
+                var conditionExpr = context.parExpression().expression();
+                if (conditionExpr != null)
                 {
-                    ReportError($"While condition must be of boolean type, found: {conditionType}", context);
+                    string conditionType = GetExpressionType(conditionExpr);
+                    if (conditionType != "boolean")
+                    {
+                        ReportError($"While condition must be of boolean type, found: {conditionType}", context);
+                    }
+                }
+
+                // Анализ тела
+                if (context.statement() != null)
+                {
+                    Visit(context.statement());
                 }
             }
+            finally
+            {
+                // Выходим из контекста цикла
+                _contextStack.Pop();
+            }
 
-            return base.VisitWhileStatement(context);
+            return null;
         }
 
         public override object VisitDoWhileStatement(JavaGrammarParser.DoWhileStatementContext context)
         {
-            // Выполняем свою проверку условия
-            var conditionExpr = context.parExpression().expression();
-            if (conditionExpr != null)
+            // Входим в контекст цикла
+            _contextStack.Push(ContextType.Loop); // или Push(BreakContextType.Loop);
+
+            try
             {
-                string conditionType = GetExpressionType(conditionExpr);
-                if (conditionType != "boolean")
+                // Сначала анализируем тело цикла
+                if (context.statement() != null)
                 {
-                    ReportError($"Do-while condition must be of boolean type, found: {conditionType}", context);
+                    Visit(context.statement()); // <-- Обход тела
+                }
+
+                // Затем анализируем условие
+                var conditionExpr = context.parExpression().expression();
+                if (conditionExpr != null)
+                {
+                    string conditionType = GetExpressionType(conditionExpr);
+                    if (conditionType != "boolean")
+                    {
+                        ReportError($"Do-while condition must be of boolean type, found: {conditionType}", context);
+                    }
                 }
             }
+            finally
+            {
+                // Выходим из контекста цикла
+                _contextStack.Pop();
+            }
 
-            // Позволяем ANTLR самому обойти тело и условие
-            return base.VisitDoWhileStatement(context); // <-- Вызываем base, но НЕ вызываем Visit(context.statement()) вручную
+            // Не вызываем base.VisitDoWhileStatement, чтобы избежать повторного обхода
+            // return base.VisitDoWhileStatement(context); // <-- УБРАТЬ
+            return null; // или return VisitChildren(context); если нужно, но обычно не нужно после ручного анализа
         }
 
         // Анализ оператора switch
         public override object VisitSwitchStatement(JavaGrammarParser.SwitchStatementContext context)
         {
-            string switchType = GetExpressionType(context.parExpression().expression());
-            if (!IsValidSwitchType(switchType))
+            // Входим в контекст switch
+            _contextStack.Push(ContextType.Switch); // или Push(BreakContextType.Switch);
+
+            try
             {
-                ReportError($"Invalid type for switch expression: {switchType}. Valid types are: int, char, String", context);
+                // Проверяем тип выражения switch
+                var selectorExpr = context.parExpression().expression();
+                if (selectorExpr != null)
+                {
+                    string selectorType = GetExpressionType(selectorExpr);
+                    // Проверьте, является ли selectorType допустимым для switch (int, String, enum, и т.д.)
+                    // ReportError, если тип недопустим
+                    if (!IsSwitchableType(selectorType))
+                    {
+                        ReportError($"Switch expression must be of integral or String type, found: {selectorType}", context);
+                    }
+                }
+
+                // Анализируем тело switch
+                if (context.switchBlockStatementGroups() != null)
+                {
+                    Visit(context.switchBlockStatementGroups());
+                }
+            }
+            finally
+            {
+                // Выходим из контекста switch
+                _contextStack.Pop();
             }
 
-            return base.VisitSwitchStatement(context);
+            return null; // или base.VisitSwitchStatement(context), если нужно, но обычно нет
+        }
+
+        private bool IsSwitchableType(string type)
+        {
+            if (type == null) return false;
+            type = type.ToLower();
+            return type == "int" || type == "short" || type == "byte" || type == "string";
         }
 
         // Анализ создания объектов и коллекций
@@ -943,7 +1015,7 @@ namespace TranslatorLibrary.SemanticAnalyzer
         {
             if (type == null) return false;
             type = type.ToLower();
-            return type == "int" || type == "char" || type == "string";
+            return type == "int" || type == "byte" || type == "short" || type == "string";
         }
 
         private void ReportError(string message, ParserRuleContext context)
@@ -1125,41 +1197,52 @@ namespace TranslatorLibrary.SemanticAnalyzer
         // Анализ цикла for
         public override object VisitForStatement(JavaGrammarParser.ForStatementContext context)
         {
-            // Создаем область видимости для переменных цикла
-            string loopScopeName = $"for_loop_{context.Start.Line}_{context.Start.Column}";
-            _symbolTable.EnterScope(loopScopeName);
+            // Входим в контекст цикла
+            _contextStack.Push(ContextType.Loop); // или Push(BreakContextType.Loop);
 
             try
             {
-                // Анализируем управление циклом
-                if (context.forControl() != null)
+                // Создаем область видимости для переменных цикла
+                string loopScopeName = $"for_loop_{context.Start.Line}_{context.Start.Column}";
+                _symbolTable.EnterScope(loopScopeName);
+
+                try
                 {
-                    // Явно проверяем тип forControl и вызываем соответствующий метод
-                    if (context.forControl() is JavaGrammarParser.EnhancedForControlContext enhancedForCtrl)
+                    // Анализируем управление циклом
+                    if (context.forControl() != null)
                     {
-                        VisitEnhancedForControl(enhancedForCtrl);
+                        // Явно проверяем тип forControl и вызываем соответствующий метод
+                        if (context.forControl() is JavaGrammarParser.EnhancedForControlContext enhancedForCtrl)
+                        {
+                            VisitEnhancedForControl(enhancedForCtrl);
+                        }
+                        else if (context.forControl() is JavaGrammarParser.TraditionalForControlContext traditionalForCtrl)
+                        {
+                            VisitTraditionalForControl(traditionalForCtrl);
+                        }
+                        else
+                        {
+                            // Неизвестный тип цикла
+                            ReportError("Unknown for loop control structure", context.forControl());
+                        }
                     }
-                    else if (context.forControl() is JavaGrammarParser.TraditionalForControlContext traditionalForCtrl)
+
+                    // Анализируем тело цикла
+                    if (context.statement() != null)
                     {
-                        VisitTraditionalForControl(traditionalForCtrl);
-                    }
-                    else
-                    {
-                        // Неизвестный тип цикла
-                        ReportError("Unknown for loop control structure", context.forControl());
+                        Visit(context.statement());
                     }
                 }
-
-                // Анализируем тело цикла
-                if (context.statement() != null)
+                finally
                 {
-                    Visit(context.statement());
+                    // Всегда выходим из области видимости цикла
+                    _symbolTable.ExitScope();
                 }
             }
             finally
             {
-                // Всегда выходим из области видимости цикла
-                _symbolTable.ExitScope();
+                // Всегда выходим из контекста цикла (внешний finally)
+                _contextStack.Pop();
             }
 
             return null;
@@ -1264,29 +1347,26 @@ namespace TranslatorLibrary.SemanticAnalyzer
         // Анализ оператора break
         public override object VisitBreakStatement(JavaGrammarParser.BreakStatementContext context)
         {
-            // Проверяем, что break используется только внутри цикла или switch
-            string currentScope = _symbolTable.GetCurrentScope();
-            bool isInLoopOrSwitch = currentScope.Contains("for_loop") ||
-                                   currentScope.Contains("while_loop") ||
-                                   currentScope.Contains("do_loop") ||
-                                   currentScope.Contains("switch");
-
-            if (!isInLoopOrSwitch)
+            // Проверяем, находится ли break внутри цикла или switch
+            // Стек не пуст, если мы внутри хотя бы одной конструкции, где break допустим
+            if (_contextStack.Count == 0)
             {
                 ReportError("Break statement must be used inside a loop or switch statement", context);
             }
 
-            // Если есть метка, проверяем ее объявление
-            if (context.identifier() != null)
+            return base.VisitBreakStatement(context);
+        }
+
+        public override object VisitContinueStatement(JavaGrammarParser.ContinueStatementContext context)
+        {
+            // Проверяем, находится ли continue внутри цикла
+            // Стек не пуст и верхний элемент - Loop
+            if (_contextStack.Count == 0 || _contextStack.Peek() != ContextType.Loop)
             {
-                string labelName = context.identifier().GetText();
-                if (!_symbolTable.IsDeclaredInCurrentScope(labelName))
-                {
-                    ReportError($"Label '{labelName}' is not declared", context);
-                }
+                ReportError("Continue statement must be used inside a loop", context);
             }
 
-            return null;
+            return base.VisitContinueStatement(context);
         }
 
         // Вспомогательные методы

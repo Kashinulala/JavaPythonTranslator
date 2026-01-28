@@ -19,15 +19,29 @@ public class SimpleJavaExample {
             System.out.println("The difference is: " + result);
         }
 
+        int x = 10;
+        boolean condition = true;
+        switch (x) {
+            case condition:
+                System.out.println(result + 1);
+                break;
+            case "":
+                System.out.println(result + 3);
+                break;
+            default:
+                break;
+        }
+
         for (int i = 0; i < 3; i++) {
-            
+            if(i == 3){
+                continue;
+            }
             System.out.println("Loop iteration: " + i);
         }
 
-        
+
 
         while (condition) {
-            int z = q;
             System.out.println("Loop iteration: " + i);
         }
     }
