@@ -719,6 +719,16 @@ public interface IJavaGrammarListener : IParseTreeListener {
 	/// <param name="context">The parse tree.</param>
 	void ExitAssignmentExpression([NotNull] JavaGrammarParser.AssignmentExpressionContext context);
 	/// <summary>
+	/// Enter a parse tree produced by <see cref="JavaGrammarParser.assignmentOperator"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void EnterAssignmentOperator([NotNull] JavaGrammarParser.AssignmentOperatorContext context);
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="JavaGrammarParser.assignmentOperator"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	void ExitAssignmentOperator([NotNull] JavaGrammarParser.AssignmentOperatorContext context);
+	/// <summary>
 	/// Enter a parse tree produced by the <c>InfixExpression</c>
 	/// labeled alternative in <see cref="JavaGrammarParser.expression1"/>.
 	/// </summary>

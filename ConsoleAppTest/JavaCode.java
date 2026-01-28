@@ -9,7 +9,7 @@ public class SimpleJavaExample {
         System.out.println("The sum is: " + x);
         
 
-        if (x < y) {
+        if (!condition) {
             result = x + y;
             System.out.println(message);
             System.out.println("The sum is: " + result);
@@ -20,10 +20,10 @@ public class SimpleJavaExample {
         }
 
         switch (x) {
-            case condition:
+            case 1:
                 System.out.println(result + 1);
                 break;
-            case "":
+            case 3:
                 System.out.println(result + 3);
                 break;
             default:

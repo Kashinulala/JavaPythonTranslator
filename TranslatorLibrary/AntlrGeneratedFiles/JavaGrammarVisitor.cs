@@ -439,6 +439,12 @@ public interface IJavaGrammarVisitor<Result> : IParseTreeVisitor<Result> {
 	/// <return>The visitor result.</return>
 	Result VisitAssignmentExpression([NotNull] JavaGrammarParser.AssignmentExpressionContext context);
 	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.assignmentOperator"/>.
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	Result VisitAssignmentOperator([NotNull] JavaGrammarParser.AssignmentOperatorContext context);
+	/// <summary>
 	/// Visit a parse tree produced by the <c>InfixExpression</c>
 	/// labeled alternative in <see cref="JavaGrammarParser.expression1"/>.
 	/// </summary>

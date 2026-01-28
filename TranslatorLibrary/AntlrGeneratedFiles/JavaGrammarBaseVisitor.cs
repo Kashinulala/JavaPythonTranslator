@@ -694,6 +694,16 @@ public partial class JavaGrammarBaseVisitor<Result> : AbstractParseTreeVisitor<R
 	/// <return>The visitor result.</return>
 	public virtual Result VisitAssignmentExpression([NotNull] JavaGrammarParser.AssignmentExpressionContext context) { return VisitChildren(context); }
 	/// <summary>
+	/// Visit a parse tree produced by <see cref="JavaGrammarParser.assignmentOperator"/>.
+	/// <para>
+	/// The default implementation returns the result of calling <see cref="AbstractParseTreeVisitor{Result}.VisitChildren(IRuleNode)"/>
+	/// on <paramref name="context"/>.
+	/// </para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	/// <return>The visitor result.</return>
+	public virtual Result VisitAssignmentOperator([NotNull] JavaGrammarParser.AssignmentOperatorContext context) { return VisitChildren(context); }
+	/// <summary>
 	/// Visit a parse tree produced by the <c>InfixExpression</c>
 	/// labeled alternative in <see cref="JavaGrammarParser.expression1"/>.
 	/// <para>

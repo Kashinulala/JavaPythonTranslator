@@ -850,6 +850,18 @@ public partial class JavaGrammarBaseListener : IJavaGrammarListener {
 	/// <param name="context">The parse tree.</param>
 	public virtual void ExitAssignmentExpression([NotNull] JavaGrammarParser.AssignmentExpressionContext context) { }
 	/// <summary>
+	/// Enter a parse tree produced by <see cref="JavaGrammarParser.assignmentOperator"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void EnterAssignmentOperator([NotNull] JavaGrammarParser.AssignmentOperatorContext context) { }
+	/// <summary>
+	/// Exit a parse tree produced by <see cref="JavaGrammarParser.assignmentOperator"/>.
+	/// <para>The default implementation does nothing.</para>
+	/// </summary>
+	/// <param name="context">The parse tree.</param>
+	public virtual void ExitAssignmentOperator([NotNull] JavaGrammarParser.AssignmentOperatorContext context) { }
+	/// <summary>
 	/// Enter a parse tree produced by the <c>InfixExpression</c>
 	/// labeled alternative in <see cref="JavaGrammarParser.expression1"/>.
 	/// <para>The default implementation does nothing.</para>
