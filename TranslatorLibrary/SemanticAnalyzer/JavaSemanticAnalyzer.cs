@@ -82,11 +82,28 @@ namespace TranslatorLibrary.SemanticAnalyzer
                     _symbolTable.Declare(varName, varType, isFinal, isStatic);
                 }
 
-                // Проверка инициализации final переменных
+                // Проверка инициализации
                 if (context.variableDeclaratorRest() != null &&
                     context.variableDeclaratorRest().variableInitializer() != null)
                 {
-                    Visit(context.variableDeclaratorRest().variableInitializer());
+                    var variableInitializer = context.variableDeclaratorRest().variableInitializer();
+                    var initializerExpression = variableInitializer.expression();
+
+                    if (initializerExpression != null)
+                    {
+                        // Явно получаем тип инициализатора
+                        string initializerType = GetExpressionType(initializerExpression);
+
+                        // Проверяем совместимость типа инициализатора с типом переменной
+                        if (!AreTypesCompatible(varType, initializerType))
+                        {
+                            ReportError($"Cannot assign '{initializerType}' to '{varType}'", variableInitializer);
+                        }
+                    }
+
+                    // Все равно вызываем Visit для инициализатора, чтобы проанализировать вложенные выражения
+                    Visit(variableInitializer);
+
                     var symbol = _symbolTable.GetSymbol(varName);
                     if (symbol != null)
                     {
