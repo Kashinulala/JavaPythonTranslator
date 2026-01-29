@@ -32,8 +32,6 @@ namespace JavaPythonTranslator.Services
             };
             _syntaxErrors.Add(syntaxError);
         }
-
-        // Очищаем ошибки перед новым анализом (если объект переиспользуется)
         public void ClearErrors()
         {
             _syntaxErrors.Clear();

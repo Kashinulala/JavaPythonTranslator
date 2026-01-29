@@ -1,14 +1,15 @@
 public class SimpleJavaExample {
 
     public static void main(String[] args) {
-        System.out.println("The sum is: " + xx);
+        
         int[] a = new int[10];
-        a[11] = 10;
+        a[1.5] = 10;
         int x = 10;
         int y = 5;
         double result = 0;
         boolean condition = true;
         String message = "Hello from Java!";
+        System.out.println("The sum is: " + x);
         
 
 

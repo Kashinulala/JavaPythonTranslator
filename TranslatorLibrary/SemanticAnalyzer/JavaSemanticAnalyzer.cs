@@ -33,16 +33,13 @@ namespace TranslatorLibrary.SemanticAnalyzer
 
             var parentCtx = context.Parent;
 
-            // Обработка локальных переменных
             if (parentCtx is JavaGrammarParser.VariableDeclaratorsContext varDecls)
             {
-                // Проверяем, является ли родитель LocalVariableDeclarationStatementContext (обычный случай: int x = 10;)
                 var localVarDeclStmt = GetParentOfType<JavaGrammarParser.LocalVariableDeclarationStatementContext>(varDecls);
                 if (localVarDeclStmt != null)
                 {
                     varType = GetTypeName(localVarDeclStmt.type());
                 }
-                // Если нет, проверяем, является ли родитель LocalVariableDeclarationContext (для forInit: int i = 0)
                 else
                 {
                     var localVarDecl = GetParentOfType<JavaGrammarParser.ForDeclarationContextContext>(varDecls);
@@ -50,12 +47,8 @@ namespace TranslatorLibrary.SemanticAnalyzer
                     {
                         varType = GetTypeName(localVarDecl.type());
                     }
-                    // Если и LocalVariableDeclarationContext не найден, оставляем varType = "unknown"
-                    // или можно добавить логирование для отладки
-                    // else { /* Возможно, ошибка в грамматике или дереве */ }
                 }
             }
-            // Обработка полей класса (оставляем как есть)
             else if (parentCtx is JavaGrammarParser.FieldDeclaratorsRestContext fieldRest)
             {
                 var fieldParent = fieldRest.Parent as JavaGrammarParser.MethodOrFieldRestContext;
@@ -66,7 +59,6 @@ namespace TranslatorLibrary.SemanticAnalyzer
                     {
                         varType = GetTypeName(methodOrFieldParent.type());
 
-                        // Поиск модификаторов в правильном месте
                         var memberDecl = GetParentOfType<JavaGrammarParser.MemberClassBodyDeclarationContext>(methodOrFieldParent);
                         if (memberDecl != null)
                         {
@@ -82,7 +74,6 @@ namespace TranslatorLibrary.SemanticAnalyzer
 
             try
             {
-                // Проверка дублирования имен
                 if (_symbolTable.IsDeclaredInCurrentScope(varName))
                 {
                     ReportError($"Variable '{varName}' is already declared in this scope", context);
@@ -92,7 +83,6 @@ namespace TranslatorLibrary.SemanticAnalyzer
                     _symbolTable.Declare(varName, varType, isFinal, isStatic);
                 }
 
-                // Проверка инициализации
                 if (context.variableDeclaratorRest() != null &&
                     context.variableDeclaratorRest().variableInitializer() != null)
                 {
@@ -101,17 +91,14 @@ namespace TranslatorLibrary.SemanticAnalyzer
 
                     if (initializerExpression != null)
                     {
-                        // Явно получаем тип инициализатора
                         string initializerType = GetExpressionType(initializerExpression);
 
-                        // Проверяем совместимость типа инициализатора с типом переменной
                         if (!AreTypesCompatible(varType, initializerType))
                         {
                             ReportError($"Cannot assign '{initializerType}' to '{varType}'", variableInitializer);
                         }
                     }
 
-                    // Все равно вызываем Visit для инициализатора, чтобы проанализировать вложенные выражения
                     Visit(variableInitializer);
 
                     var symbol = _symbolTable.GetSymbol(varName);
@@ -129,56 +116,42 @@ namespace TranslatorLibrary.SemanticAnalyzer
             return null;
         }
 
-        // Переопределите VisitPrimaryExpression
         public override object VisitPrimaryExpression(JavaGrammarParser.PrimaryExpressionContext context)
         {
-            // PrimaryExpressionContext содержит expression1()
-            // Мы должны вызвать GetExpression1Type для этого expression1
             var expr1 = context.expression1();
             if (expr1 != null)
             {
                 string exprType = GetExpression1Type(expr1);
-                // Возвращаем тип выражения
                 return exprType;
             }
 
-            // Если expression1 отсутствует, возвращаем unknown
             return "unknown";
         }
 
-        // Переопределите VisitSimpleExpression2
         public override object VisitSimpleExpression2(JavaGrammarParser.SimpleExpression2Context context)
         {
-            // SimpleExpression2Context содержит expression2()
-            // Мы должны вызвать GetExpression2Type для этого expression2
             var expr2 = context.expression2();
             if (expr2 != null)
             {
                 string exprType = GetExpression2Type(expr2);
-                // Возвращаем тип выражения
                 return exprType;
             }
 
-            // Если expression2 отсутствует, возвращаем unknown
             return "unknown";
         }
 
-        // Анализ выражений присваивания
         public override object VisitAssignmentExpression(JavaGrammarParser.AssignmentExpressionContext context)
         {
             var expressions = context.expression();
             if (expressions != null && expressions.Length >= 2)
             {
-                var leftSide = expressions[0]; // z
-                var rightSide = expressions[1]; // q
+                var leftSide = expressions[0];
+                var rightSide = expressions[1];
 
-                // --- Проверка левой части через GetExpressionType ---
-                string leftType = GetExpressionType(leftSide); // <-- Это вызовет GetPostfixExpressionType, который вызовет GetSymbol
+                string leftType = GetExpressionType(leftSide);
 
                 if (leftType == "unknown")
                 {
-                    // Это означает, что переменная слева не найдена в SymbolTable
-                    // Попробуем извлечь имя для сообщения об ошибке
                     string varName = TryGetIdentifierName(leftSide);
                     if (!string.IsNullOrEmpty(varName))
                     {
@@ -188,13 +161,9 @@ namespace TranslatorLibrary.SemanticAnalyzer
                     {
                         ReportError("Left side of assignment is not a valid variable or is not declared", leftSide);
                     }
-                    // Не возвращаемся сразу, чтобы проанализировать правую часть и получить все ошибки
                 }
-                // Проверка на IsFinal и IsInitialized через GetSymbol (если нужно, но это сложнее с GetExpressionType)
-                // Лучше оставить это как отдельную проверку, если leftType != "unknown"
                 else
                 {
-                    // Левая сторона объявлена, теперь проверим, является ли она final
                     string varName = TryGetIdentifierName(leftSide);
                     if (!string.IsNullOrEmpty(varName))
                     {
@@ -202,12 +171,10 @@ namespace TranslatorLibrary.SemanticAnalyzer
                         if (symbol != null && symbol.IsFinal && symbol.IsInitialized)
                         {
                             ReportError($"Final variable '{varName}' cannot be reassigned", leftSide);
-                            // Не возвращаемся сразу, чтобы проанализировать правую часть
                         }
                     }
                 }
 
-                // --- Проверка правой части ---
                 string rightType = GetExpressionType(rightSide);
 
                 if (rightType == "unknown")
@@ -223,8 +190,6 @@ namespace TranslatorLibrary.SemanticAnalyzer
                     }
                 }
 
-                // --- Проверка совместимости типов ---
-                // Проверяем только если оба типа известны
                 if (leftType != "unknown" && rightType != "unknown")
                 {
                     if (!AreTypesCompatible(leftType, rightType))
@@ -236,7 +201,7 @@ namespace TranslatorLibrary.SemanticAnalyzer
                 }
             }
 
-            return null; // или return VisitChildren(context); если нужно продолжить обход
+            return null;
         }
 
         // Анализ инфиксных выражений (арифметические и логические операторы)
@@ -386,7 +351,7 @@ namespace TranslatorLibrary.SemanticAnalyzer
         public override object VisitWhileStatement(JavaGrammarParser.WhileStatementContext context)
         {
             // Входим в контекст цикла
-            _contextStack.Push(ContextType.Loop); // или Push(BreakContextType.Loop);
+            _contextStack.Push(ContextType.Loop);
 
             try
             {
@@ -419,14 +384,14 @@ namespace TranslatorLibrary.SemanticAnalyzer
         public override object VisitDoWhileStatement(JavaGrammarParser.DoWhileStatementContext context)
         {
             // Входим в контекст цикла
-            _contextStack.Push(ContextType.Loop); // или Push(BreakContextType.Loop);
+            _contextStack.Push(ContextType.Loop);
 
             try
             {
                 // Сначала анализируем тело цикла
                 if (context.statement() != null)
                 {
-                    Visit(context.statement()); // <-- Обход тела
+                    Visit(context.statement());
                 }
 
                 // Затем анализируем условие
@@ -446,9 +411,7 @@ namespace TranslatorLibrary.SemanticAnalyzer
                 _contextStack.Pop();
             }
 
-            // Не вызываем base.VisitDoWhileStatement, чтобы избежать повторного обхода
-            // return base.VisitDoWhileStatement(context); // <-- УБРАТЬ
-            return null; // или return VisitChildren(context); если нужно, но обычно не нужно после ручного анализа
+            return null;
         }
 
         // Анализ оператора switch
@@ -470,7 +433,6 @@ namespace TranslatorLibrary.SemanticAnalyzer
                     string selectorType = GetExpressionType(selectorExpr);
                     _currentSwitchType = selectorType; // Сохраняем тип
 
-                    // Проверьте, является ли selectorType допустимым для switch (int, String, enum, и т.д.)
                     if (!IsSwitchableType(selectorType))
                     {
                         ReportError($"Switch expression must be of integral or String type, found: {selectorType}", context);
@@ -504,12 +466,10 @@ namespace TranslatorLibrary.SemanticAnalyzer
                 var child = context.GetChild(i);
                 if (child is JavaGrammarParser.SwitchLabelContext switchLabelCtx)
                 {
-                    Visit(switchLabelCtx); // Это вызовет VisitCaseExprLabel, VisitCaseEnumLabel или VisitDefaultLabel
+                    Visit(switchLabelCtx);
                 }
             }
 
-            // Не вызываем base.VisitSwitchLabels(context)
-            // return base.VisitSwitchLabels(context); // <-- УБРАТЬ
             return null;
         }
 
@@ -559,9 +519,6 @@ namespace TranslatorLibrary.SemanticAnalyzer
                     Visit(stmt);
                 }
             }
-
-            // Не вызываем base.VisitSwitchBlockStatementGroup(context)
-            // return base.VisitSwitchBlockStatementGroup(context); // <-- УБРАТЬ
             return null;
         }
 
@@ -617,7 +574,6 @@ namespace TranslatorLibrary.SemanticAnalyzer
             return type == "int" || type == "short" || type == "byte" || type == "string";
         }
 
-        // Анализ создания объектов и коллекций
         // Анализ создания объектов и коллекций
         public override object VisitNewCreatorPrimary(JavaGrammarParser.NewCreatorPrimaryContext context)
         {
@@ -734,11 +690,8 @@ namespace TranslatorLibrary.SemanticAnalyzer
         }
 
         // Вспомогательный метод для извлечения имени идентификатора из простого выражения
-        // Это упрощение и может не работать для сложных выражений вроде arr[index] = value
         private string TryGetIdentifierName(JavaGrammarParser.ExpressionContext expr)
         {
-            // Пробуем найти IdentifierPrimaryContext в выражении
-            // Это работает для простого идентификатора
             if (expr is JavaGrammarParser.PrimaryExpressionContext primExpr)
             {
                 var expr1 = primExpr.expression1();
@@ -758,15 +711,13 @@ namespace TranslatorLibrary.SemanticAnalyzer
                     }
                 }
             }
-            // Можно добавить больше проверок для других типов выражений, если нужно
-            return null; // Не удалось извлечь имя
+            return null;
         }
 
         private string GetExpression1Type(JavaGrammarParser.Expression1Context expr1)
         {
             if (expr1 == null) return "unknown";
 
-            // Expression1 может быть InfixExpressionContext или SimpleExpression2Context
             // Проверяем, является ли выражение1 инфиксным (операции)
             if (expr1 is JavaGrammarParser.InfixExpressionContext infixExpr)
             {
@@ -779,16 +730,11 @@ namespace TranslatorLibrary.SemanticAnalyzer
                 }
                 else
                 {
-                    // Нет операторов - это скорее всего просто expression2
-                    // Проверим, есть ли хотя бы один expression2
                     var operands = infixExpr.expression2();
                     if (operands != null && operands.Length == 1)
                     {
-                        // Это может быть эквивалент SimpleExpression2 -> expression2
-                        // Вызовем GetExpression2Type для этого единственного выражения
                         return GetExpression2Type(operands[0]);
                     }
-                    // Если operands.Length != 1, это странная ситуация
                 }
             }
             // Проверяем, является ли выражение1 простым выражением2 (обычно первичное выражение или унарные/постфиксные операции)
@@ -797,8 +743,6 @@ namespace TranslatorLibrary.SemanticAnalyzer
                 var expr2 = simpleExpr2.expression2();
                 if (expr2 != null)
                 {
-                    // Теперь expr2 может быть PrefixExpression, PostfixExpression или другими
-                    // Вызываем GetExpression2Type для обработки expr2
                     return GetExpression2Type(expr2);
                 }
             }
@@ -808,14 +752,9 @@ namespace TranslatorLibrary.SemanticAnalyzer
 
         private string GetExpression2Type(JavaGrammarParser.Expression2Context context)
         {
-            // Expression2 может быть:
-            // 1. PostfixExpressionContext (с primary внутри)
-            // 2. PrefixExpressionContext (с primary внутри)
-            // Проверяем PostfixExpressionContext - это основной случай для Expression2
             if (context is JavaGrammarParser.PostfixExpressionContext postfixExpr)
             {
                 // Вызываем отдельный метод для обработки PostfixExpression
-                // Этот метод должен содержать всю логику для PostfixExpression, включая primary, selector, postfixOp
                 return GetPostfixExpressionType(postfixExpr);
             }
             // Проверяем PrefixExpressionContext
@@ -838,10 +777,8 @@ namespace TranslatorLibrary.SemanticAnalyzer
                 if (basicTypeCtx.basicType() != null)
                 {
                     // Получаем базовый тип (int, boolean, и т.д.)
-                    string baseTypeName = GetBasicTypeName(basicTypeCtx.basicType()); // Используем наш новый метод
-                                                                                      // Получаем количество размерностей массива
-                    int dimensionCount = basicTypeCtx.LBRACK().Length; // Количество токенов [
-                                                                       // Строим полное имя типа
+                    string baseTypeName = GetBasicTypeName(basicTypeCtx.basicType()); 
+                    int dimensionCount = basicTypeCtx.LBRACK().Length;
                     string fullTypeName = baseTypeName + BuildArrayPart(dimensionCount);
                     return fullTypeName;
                 }
@@ -853,15 +790,12 @@ namespace TranslatorLibrary.SemanticAnalyzer
                     var refType = refTypeCtx.referenceType();
                     if (refType.identifier().Length > 0)
                     {
-                        // --- ПРОВЕРКА СУЩЕСТВОВАНИЯ КЛАССА ---
                         string baseTypeName = refType.identifier()[0].GetText();
                         if (!_symbolTable.IsClass(baseTypeName))
                         {
-                            // Вызываем ошибку здесь, где есть контекст для отчёта
                             ReportError($"Class '{baseTypeName}' is not declared", refType.identifier()[0]); // Или refTypeCtx
                             return "unknown"; // Возвращаем unknown как ошибка
                         }
-                        // --- КОНЕЦ ПРОВЕРКИ ---
 
                         int dimensionCount = refTypeCtx.LBRACK().Length;
                         string fullTypeName = baseTypeName + BuildArrayPart(dimensionCount);
@@ -884,14 +818,8 @@ namespace TranslatorLibrary.SemanticAnalyzer
             // Проверяем, есть ли хотя бы один оператор и два операнда
             if (operators.Length == 0 || operands.Length < 2)
             {
-                // Это странная ситуация, возможно, выражение вроде "x"
-                // Но это не InfixExpression, если нет операторов.
-                // Если длина operands > 1, а операторов нет, это ошибка грамматики.
                 if (operands.Length == 1)
                 {
-                    // Это может быть не InfixExpression вовсе, а SimpleExpression2 или что-то другое.
-                    // Хотя грамматика выражает это как InfixExpression даже с 1 операндом и 0 операторов.
-                    // В этом случае, просто возвращаем тип первого операнда.
                     return GetExpression2Type(operands[0]);
                 }
                 return "unknown";
@@ -934,7 +862,6 @@ namespace TranslatorLibrary.SemanticAnalyzer
                         resultType = GetArithmeticResultType(resultType, rightOperandType);
                     }
                 }
-                // Проверяем, совместимы ли типы для данного оператора
                 // Операторы сравнения
                 else if (new[] { "<", ">", "<=", ">=", "==", "!=", "&&", "||" }.Contains(op))
                 {
@@ -1003,8 +930,6 @@ namespace TranslatorLibrary.SemanticAnalyzer
             if (prefixOp != null && innerExpr2 != null)
             {
                 string op = prefixOp.GetText();
-                // ВАЖНО: Вызываем GetExpression2Type для внутреннего выражения
-                // Это может привести к рекурсии, но она должна завершиться
                 string operandType = GetExpression2Type(innerExpr2);
 
                 // Логическое отрицание
@@ -1083,16 +1008,14 @@ namespace TranslatorLibrary.SemanticAnalyzer
                             // primaryType должен быть массивом (например, int[], int[][], String[][] и т.д.)
                             if (primaryType.EndsWith("[]"))
                             {
-                                // Тип результата доступа к массиву - это тип элемента массива (убираем ОДНУ пару [])
-                                // ВАЖНО: Удаляем только последнюю пару []
+                                // Удаляем только последнюю пару []
                                 int lastBracketIndex = primaryType.LastIndexOf("[]");
-                                if (lastBracketIndex >= 0 && lastBracketIndex == primaryType.Length - 2) // Проверяем, что [] в конце
+                                if (lastBracketIndex >= 0 && lastBracketIndex == primaryType.Length - 2)
                                 {
-                                    primaryType = primaryType.Substring(0, lastBracketIndex); // Удаляем последние []
+                                    primaryType = primaryType.Substring(0, lastBracketIndex);
                                 }
                                 else
                                 {
-                                    // Теоретически не должно сработать, если EndsWith("[]") true, но на всякий случай
                                     ReportError($"Invalid array type format '{primaryType}'", arrayAccessSuffix);
                                     return "unknown";
                                 }
@@ -1180,9 +1103,6 @@ namespace TranslatorLibrary.SemanticAnalyzer
                                                     chainValid = false;
                                                     break;
                                                 }
-                                                // Метод найден. Тип объекта, у которого вызывается метод, установлен.
-                                                // currentType остаётся тем же (например, "PrintStream").
-                                                // Тип результата вызова будет определён ниже.
                                             }
                                             else
                                             {
@@ -1199,9 +1119,6 @@ namespace TranslatorLibrary.SemanticAnalyzer
                                         }
                                         else
                                         {
-                                            // Это не встроенный тип, проверяем в SymbolTable
-                                            // Это требует реализации отслеживания полей/методов в пользовательских классах
-                                            // Пока что для пользовательских типов можно вернуть ошибку или "unknown"
                                             ReportError($"Accessing members of non-built-in type '{currentType}' is not fully implemented", idPrimary);
                                             chainValid = false;
                                             break;
@@ -1212,22 +1129,20 @@ namespace TranslatorLibrary.SemanticAnalyzer
                                 if (chainValid)
                                 {
                                     // Цепочка разрешена, теперь анализируем аргументы метода
-                                    var arguments = argsSuffix.arguments(); // (...)
+                                    var arguments = argsSuffix.arguments();
                                     var expressionList = arguments.expressionList();
                                     if (expressionList != null)
                                     {
-                                        var argExpressions = expressionList.expression(); // ["The sum is: " + xx]
+                                        var argExpressions = expressionList.expression();
                                         if (argExpressions != null)
                                         {
-                                            // АНАЛИЗИРУЕМ АРГУМЕНТЫ
                                             bool argumentsValid = true;
                                             foreach (var argExpr in argExpressions)
                                             {
-                                                string argType = GetExpressionType(argExpr); // <-- ТУТ
+                                                string argType = GetExpressionType(argExpr);
                                                 if (argType == "unknown")
                                                 {
                                                     argumentsValid = false;
-                                                    // ReportError уже должен быть вызван внутри GetExpressionType(argExpr)
                                                 }
                                             }
 
@@ -1238,15 +1153,13 @@ namespace TranslatorLibrary.SemanticAnalyzer
                                         }
                                     }
                                     // Устанавливаем тип результата вызова метода.
-                                    // Получаем информацию о методе (мы знаем, что он существует из HasMethod)
                                     MethodInfo methodInfo = BuiltInTypes.GetMethodInfo(currentType, chain[chain.Count - 1]); // Имя метода
                                     if (methodInfo != null)
                                     {
-                                        primaryType = methodInfo.ReturnType; // Например, "void" для println
+                                        primaryType = methodInfo.ReturnType;
                                     }
                                     else
                                     {
-                                        // Теоретически не должно сработать, если HasMethod был true
                                         primaryType = "unknown";
                                     }
                                 }
@@ -1277,10 +1190,10 @@ namespace TranslatorLibrary.SemanticAnalyzer
                     var parExpr = parenthPrimary.parExpression();
                     if (parExpr != null)
                     {
-                        var innerExpr = parExpr.expression(); // Это x < y
+                        var innerExpr = parExpr.expression();
                         if (innerExpr != null)
                         {
-                            primaryType = GetExpressionType(innerExpr); // Рекурсивный вызов для анализа x < y
+                            primaryType = GetExpressionType(innerExpr);
                         }
                     }
                 }
@@ -1307,7 +1220,6 @@ namespace TranslatorLibrary.SemanticAnalyzer
                 // Проверяем selector (например, вызовы методов, доступ к полям, доступ к массивам)
                 if (postfixExpr.selector() != null && postfixExpr.selector().Length > 0)
                 {
-                    // Проходим по каждому селектору (обычно это один для простого доступа к массиву или точка для вызова метода/доступа к полю)
                     foreach (var sel in postfixExpr.selector())
                     {
                         if (sel is JavaGrammarParser.ArraySelectorContext arraySel)
@@ -1372,11 +1284,8 @@ namespace TranslatorLibrary.SemanticAnalyzer
 
                 if (basicTypeCtx != null && arrayCreatorRest != null)
                 {
-                    // string baseTypeName = GetTypeName(basicTypeCtx); // <-- ОШИБКА: BasicTypeContext != TypeContext
-                    string baseTypeName = GetBasicTypeName(basicTypeCtx); // <-- НОВЫЙ МЕТОД
-                                                                          // Подсчитываем количество [] в arrayCreatorRest
+                    string baseTypeName = GetBasicTypeName(basicTypeCtx);
                     int dimensions = CountArrayDimensions(arrayCreatorRest);
-                    // Формируем имя типа массива, например, "int[][]"
                     return baseTypeName + BuildArrayPart(dimensions);
                 }
             }
@@ -1388,8 +1297,7 @@ namespace TranslatorLibrary.SemanticAnalyzer
 
                 if (createdName != null && arrayCreatorRest != null)
                 {
-                    // Извлекаем имя типа из createdName
-                    string baseTypeName = GetCreatedNameTypeName(createdName); // Нужно реализовать
+                    string baseTypeName = GetCreatedNameTypeName(createdName);
                     int dimensions = CountArrayDimensions(arrayCreatorRest);
                     return baseTypeName + BuildArrayPart(dimensions);
                 }
@@ -1426,8 +1334,7 @@ namespace TranslatorLibrary.SemanticAnalyzer
             if (basicTypeCtx == null) return "unknown";
 
             // Получаем первый (и единственный) дочерний токен
-            var token = basicTypeCtx.Start; // Это может быть не совсем то, что нужно для дочернего токена
-                                            // Лучше получить дочерний элемент напрямую
+            var token = basicTypeCtx.Start; 
             var child = basicTypeCtx.GetChild(0); // Получаем первый дочерний элемент
 
             if (child is ITerminalNode terminalNode)
@@ -1457,7 +1364,7 @@ namespace TranslatorLibrary.SemanticAnalyzer
                 }
             }
 
-            // Если дочерний элемент не является терминалом (что маловероятно для basicType), вернуть unknown
+            // Если дочерний элемент не является терминалом, вернуть unknown
             return "unknown";
         }
 
@@ -1467,10 +1374,7 @@ namespace TranslatorLibrary.SemanticAnalyzer
             if (arrayCreatorRest == null) return 0;
 
             // Подсчитываем количество LBRACK (открывающих квадратных скобок)
-            // Это работает для обеих альтернатив arrayCreatorRest
             int dimensionCount = 0;
-
-            // ANTLR позволяет получить список токенов LBRACK
             var lbrackTokens = arrayCreatorRest.GetTokens(JavaGrammarParser.LBRACK);
             if (lbrackTokens != null)
             {
@@ -1481,14 +1385,9 @@ namespace TranslatorLibrary.SemanticAnalyzer
         }
 
         // Вспомогательный метод для получения имени типа из createdName
-        // createdName: identifier typeArgumentsOrDiamond? (DOT identifier typeArgumentsOrDiamond?)*
         private string GetCreatedNameTypeName(JavaGrammarParser.CreatedNameContext createdName)
         {
             if (createdName == null) return "unknown";
-
-            // Для простоты, возьмём только первый идентификатор (имя класса)
-            // В реальности, это может быть полное имя типа (com.example.MyClass)
-            // и нужно учитывать обобщения (generics), но для базового случая:
             var firstId = createdName.identifier(0); // Первый идентификатор
             if (firstId != null)
             {
@@ -1556,17 +1455,6 @@ namespace TranslatorLibrary.SemanticAnalyzer
                 }
                 return false;
             }
-
-            // Проверка для коллекций (если они не массивы)
-            // Убедитесь, что IsCollectionType не возвращает true для T[]
-            // if (IsCollectionType(type1) && IsCollectionType(type2))
-            // {
-            //     // Логика для коллекций
-            //     return true; // или более сложная проверка
-            // }
-
-            // Для остальных типов (классов)
-            // Можно добавить проверку на наследование
             return false;
         }
 
@@ -1580,7 +1468,7 @@ namespace TranslatorLibrary.SemanticAnalyzer
         {
             if (IsArrayType(arrayType))
             {
-                return arrayType.Substring(0, arrayType.Length - 2); // Убираем "[]"
+                return arrayType.Substring(0, arrayType.Length - 2);
             }
             return arrayType; // Если не массив, возвращаем как есть
         }
@@ -1640,9 +1528,6 @@ namespace TranslatorLibrary.SemanticAnalyzer
                 }
             }
 
-            // НЕ проверяем наличие метода main здесь.
-            // Это делает VisitVoidMethodDeclaratorRest или другой метод, специально предназначенный для этой проверки.
-
             // Входим в область видимости класса
             _symbolTable.EnterScope(className);
 
@@ -1673,7 +1558,6 @@ namespace TranslatorLibrary.SemanticAnalyzer
                         var formalParamDecls = formalParams.formalParameterDecls();
                         if (formalParamDecls != null)
                         {
-                            // --- УПРОЩЁННАЯ ПРОВЕРКА ---
                             // Получаем полный тип параметра (например, "String[]")
                             string fullParamType = GetTypeName(formalParamDecls.type());
 
@@ -1682,14 +1566,12 @@ namespace TranslatorLibrary.SemanticAnalyzer
                             {
                                 ReportError("Main method parameter must be of type String[]", context);
                             }
-                            // --- КОНЕЦ УПРОЩЁННОЙ ПРОВЕРКИ ---
 
-                            // Проверяем имя параметра (необязательно для семантики, но можно проверить стилю)
+                            // Проверяем имя параметра
                             var paramRest = formalParamDecls.formalParameterDeclsRest();
                             if (paramRest != null && paramRest.variableDeclaratorId() != null)
                             {
                                 string paramName = paramRest.variableDeclaratorId().identifier().GetText();
-                                // Например, можно проверить, что имя не начинается с заглавной буквы
                                 if (char.IsUpper(paramName.FirstOrDefault()))
                                 {
                                     ReportWarning($"Parameter name '{paramName}' should start with lowercase letter", paramRest.variableDeclaratorId());
@@ -1698,13 +1580,13 @@ namespace TranslatorLibrary.SemanticAnalyzer
                         }
                         else
                         {
-                            // formalParamDecls == null -> значит, параметров нет (public static void main())
+                            // formalParamDecls == null значит, параметров нет (public static void main())
                             ReportError("Main method must have exactly one parameter of type String[]", context);
                         }
                     }
                     else
                     {
-                        // formalParameters == null -> значит, параметров нет (public static void main())
+                        // formalParameters == null значит, параметров нет (public static void main())
                         ReportError("Main method must have exactly one parameter of type String[]", context);
                     }
 
@@ -1744,7 +1626,7 @@ namespace TranslatorLibrary.SemanticAnalyzer
         public override object VisitForStatement(JavaGrammarParser.ForStatementContext context)
         {
             // Входим в контекст цикла
-            _contextStack.Push(ContextType.Loop); // или Push(BreakContextType.Loop);
+            _contextStack.Push(ContextType.Loop);
 
             try
             {
@@ -1799,7 +1681,7 @@ namespace TranslatorLibrary.SemanticAnalyzer
             // Проверка инициализации
             if (context.forInit() != null)
             {
-                Visit(context.forInit()); // <-- Это вызовет VisitVariableDeclarator
+                Visit(context.forInit());
             }
 
             // Проверка условия цикла
@@ -1894,7 +1776,6 @@ namespace TranslatorLibrary.SemanticAnalyzer
         public override object VisitBreakStatement(JavaGrammarParser.BreakStatementContext context)
         {
             // Проверяем, находится ли break внутри цикла или switch
-            // Стек не пуст, если мы внутри хотя бы одной конструкции, где break допустим
             if (_contextStack.Count == 0)
             {
                 ReportError("Break statement must be used inside a loop or switch statement", context);
@@ -1949,13 +1830,11 @@ namespace TranslatorLibrary.SemanticAnalyzer
                             }
                             else
                             {
-                                // --- НОВЫЙ ВЫЗОВ ValidateCollectionMethodCall ---
                                 // Проверяем базовую совместимость метода с типом коллекции
                                 ValidateCollectionMethodCall(symbol.Type, methodName, context);
 
                                 // Затем проверяем аргументы метода коллекции
                                 ValidateCollectionMethodCallWithArguments(symbol.Type, methodName, context);
-                                // ---
                             }
                         }
                         else
@@ -2150,21 +2029,16 @@ namespace TranslatorLibrary.SemanticAnalyzer
         // Вспомогательный метод для получения ожидаемого типа возврата
         private string GetExpectedMethodReturnType(string currentScope)
         {
-            // В реальной реализации нужно хранить информацию о методах
-            // Упрощенная версия - предполагаем, что в scope есть информация о методе
             if (currentScope.Contains("main_method"))
             {
                 return "void"; // main метод всегда void
             }
-            // Здесь должна быть логика для получения типа возврата из объявления метода
             return "unknown";
         }
 
         // Вспомогательный метод для получения типа элемента коллекции
         private string GetCollectionElementType(string collectionType)
         {
-            // Реализуйте извлечение типа элемента из строки типа, например "ArrayList<String>" -> "String"
-            // Это может быть сложнее, если тип не содержит дженериков (raw type)
             if (collectionType.Contains("<"))
             {
                 int start = collectionType.IndexOf('<') + 1;
@@ -2178,21 +2052,19 @@ namespace TranslatorLibrary.SemanticAnalyzer
         }
 
         // Вспомогательный метод для проверки аргументов вызова метода коллекции
-        // Этот метод нужно реализовать или убедиться, что он реализован корректно
         private void ValidateCollectionMethodCallWithArguments(string collectionType, string methodName, JavaGrammarParser.MethodOrFieldSelectorContext context)
         {
-            // 1. Извлечь аргументы метода из контекста
-            var arguments = GetMethodArguments(context); // Вам нужно реализовать этот вспомогательный метод
+            var arguments = GetMethodArguments(context);
 
-            // 2. Проверить количество аргументов в зависимости от метода
+            // Проверить количество аргументов в зависимости от метода
             switch (methodName)
             {
                 case "add":
                     if (arguments.Count == 1)
                     {
                         // Проверить тип аргумента против типа элемента коллекции
-                        string collectionElementType = GetCollectionElementType(collectionType); // Реализовать
-                        string argumentType = GetExpressionType(arguments[0]); // Используем существующий метод
+                        string collectionElementType = GetCollectionElementType(collectionType);
+                        string argumentType = GetExpressionType(arguments[0]);
 
                         if (!AreTypesCompatible(argumentType, collectionElementType))
                         {
@@ -2208,9 +2080,8 @@ namespace TranslatorLibrary.SemanticAnalyzer
                 case "put":
                     if (arguments.Count == 2)
                     {
-                        // Проверить типы аргументов против типа ключа и значения коллекции (Map)
-                        string collectionKeyType = GetMapKeyType(collectionType); // Реализовать
-                        string collectionValueType = GetMapValueType(collectionType); // Реализовать
+                        string collectionKeyType = GetMapKeyType(collectionType);
+                        string collectionValueType = GetMapValueType(collectionType);
                         string keyType = GetExpressionType(arguments[0]);
                         string valueType = GetExpressionType(arguments[1]);
 
@@ -2255,10 +2126,7 @@ namespace TranslatorLibrary.SemanticAnalyzer
                     }
                     break;
 
-                // Добавьте другие методы по необходимости
-
                 default:
-                    // Для других методов коллекций можно реализовать аналогичные проверки
                     break;
             }
         }

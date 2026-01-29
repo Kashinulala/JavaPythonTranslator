@@ -24,38 +24,32 @@ namespace JavaPythonTranslator.Services
 
                 ICharStream stream = CharStreams.fromString(javaCode);
                 JavaGrammarLexer lexer = new JavaGrammarLexer(stream);
-                // --- Устанавливаем слушатель для лексера ---
-                lexer.RemoveErrorListeners(); // Удаляем стандартные слушатели (например, ConsoleErrorListener)
-                lexer.AddErrorListener(syntaxErrorListener); // <-- Теперь должно работать
+
+                lexer.RemoveErrorListeners();
+                lexer.AddErrorListener(syntaxErrorListener);
 
                 ITokenStream tokens = new CommonTokenStream(lexer);
                 JavaGrammarParser parser = new JavaGrammarParser(tokens);
-                // --- Устанавливаем слушатель для парсера ---
-                parser.RemoveErrorListeners(); // Удаляем стандартные слушатели
-                parser.AddErrorListener(syntaxErrorListener); // <-- Теперь должно работать
+                parser.RemoveErrorListeners();
+                parser.AddErrorListener(syntaxErrorListener);
 
-                // 2. Строим дерево разбора
                 IParseTree tree = parser.compilationUnit();
 
-                // 3. Проверяем синтаксические ошибки, собранные слушателем
-                var syntaxErrors = syntaxErrorListener.SyntaxErrors.ToList(); // Копируем список
+                var syntaxErrors = syntaxErrorListener.SyntaxErrors.ToList();
                 if (syntaxErrors.Any())
                 {
                     return new AnalyzeResponse
                     {
                         Success = false,
                         Message = "Syntax errors found.",
-                        Errors = syntaxErrors // Возвращаем синтаксические ошибки
+                        Errors = syntaxErrors
                     };
                 }
 
-                // 4. Если синтаксических ошибок нет, запускаем семантический анализ
                 SemanticAnalyzer analyzer = new SemanticAnalyzer();
-                analyzer.Visit(tree); // Это заполняет analyzer.Errors
+                analyzer.Visit(tree);
 
-                // 5. Формируем ответ для семантического анализа
                 var response = new AnalyzeResponse();
-                // Сначала добавим возможные синтаксические ошибки, если они возникли *после* построения дерева (редко, но возможно)
                 syntaxErrors = syntaxErrorListener.SyntaxErrors.ToList();
                 if (syntaxErrors.Any())
                 {
@@ -69,7 +63,6 @@ namespace JavaPythonTranslator.Services
                 {
                     response.Success = false;
                     response.Message = "Semantic errors found.";
-                    // Добавляем семантические ошибки
                     foreach (var error in analyzer.Errors)
                     {
                         response.Errors.Add(new SemanticError

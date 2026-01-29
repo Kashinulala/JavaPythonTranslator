@@ -10,7 +10,6 @@ namespace JavaPythonTranslator.Controllers
     {
         private readonly IJavaAnalyzerService _javaAnalyzerService;
 
-        // Внедряем сервис через конструктор
         public TranslatorController(IJavaAnalyzerService javaAnalyzerService)
         {
             _javaAnalyzerService = javaAnalyzerService;

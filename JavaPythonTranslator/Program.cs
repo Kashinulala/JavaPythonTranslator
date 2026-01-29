@@ -12,7 +12,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://192.168.0.10:8080") // Замените на реальные URL вашего frontend
+        policy.WithOrigins("http://192.168.0.10:8080")
               .AllowAnyHeader()
               .AllowAnyMethod();
     });

@@ -62,8 +62,6 @@
                 objectType.Methods.Add("hashCode", new MethodInfo("int"));
             }
             _types.Add("Object", objectType);
-
-            // Добавьте другие стандартные типы...
         }
 
         // Проверить, является ли тип встроенным
@@ -85,8 +83,6 @@
             var typeInfo = GetTypeInfo(typeName);
             return typeInfo != null && typeInfo.Fields.ContainsKey(fieldName);
         }
-
-        // Получить тип поля
         public static string GetFieldType(string typeName, string fieldName)
         {
             var typeInfo = GetTypeInfo(typeName);
@@ -96,16 +92,12 @@
             }
             return null; // Поле не найдено
         }
-
-        // Проверить, существует ли метод в типе (упрощённо, без перегрузки)
         public static bool HasMethod(string typeName, string methodName)
         {
             var typeInfo = GetTypeInfo(typeName);
-            // Проверяем в Dictionary<string, MethodInfo>
             return typeInfo != null && typeInfo.Methods.ContainsKey(methodName);
         }
 
-        // Получить информацию о методе (упрощённо, без перегрузки)
         public static MethodInfo GetMethodInfo(string typeName, string methodName)
         {
             var typeInfo = GetTypeInfo(typeName);
@@ -141,11 +133,9 @@
         }
     }
 
-    // Класс для хранения информации о типе (классе)
     public class TypeInfo
     {
         public Dictionary<string, FieldInfo> Fields { get; set; } = new Dictionary<string, FieldInfo>();
-        // Используем Dictionary, но добавляем ТОЛЬКО ОДИН MethodInfo на имя метода
         public Dictionary<string, MethodInfo> Methods { get; set; } = new Dictionary<string, MethodInfo>();
     }
 }
