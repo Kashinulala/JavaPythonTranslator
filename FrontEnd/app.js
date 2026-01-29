@@ -28,54 +28,79 @@ document.addEventListener('DOMContentLoaded', function() {
     const copyButton = document.querySelector('#Copy');
     
     // Базовый URL API
-    const API_URL = 'http://localhost:5000/api';
+    const API_URL = 'https://localhost:7240/api/Translator';
     
     // Обработка отправки кода
     submitButton.addEventListener('click', async function(e) {
         e.preventDefault();
-        
+
         const code = codeInputEditor.getValue().trim();
         if (!code) {
             showMessage('Введите код для трансляции', 'warning');
             return;
         }
-        
+
         try {
             // Показать индикатор загрузки
             submitButton.disabled = true;
             submitButton.textContent = 'Обработка...';
-            
+
             // Отправка запроса на бэкенд
-            const response = await fetch(`${API_URL}/translate`, {
+            const response = await fetch(`${API_URL}/analyze`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ code: code })
+                body: JSON.stringify({ javaCode: code })
             });
-            
+
+            // --- ИЗМЕНЕНИЕ: Обрабатываем HTTP-ошибки отдельно ---
+            let result;
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            const result = await response.json();
-            
-            // Заполняем поле вывода
-            if (result.success) {
-                codeOutputEditor.setValue(result.translatedCode || result.output || '');
-                showMessage('Код успешно трансформирован', 'success');
-                
-                // Обновляем отображение
-                setTimeout(() => {
-                    codeOutputEditor.refresh();
-                }, 100);
+                // Сервер вернул ошибку (4xx, 5xx)
+                // Пытаемся получить тело ошибки (JSON с информацией от API)
+                try {
+                    result = await response.json(); // Предполагаем, что сервер всегда возвращает JSON
+                } catch (jsonError) {
+                    // Если тело ответа не JSON (редко, но возможно), создаём объект ошибки
+                    console.warn('Response body is not JSON:', jsonError);
+                    result = {
+                        success: false,
+                        message: `HTTP ${response.status}: ${response.statusText}`,
+                        errors: [{ line: 0, column: 0, message: `HTTP ${response.status}: ${response.statusText}` }]
+                    };
+                }
+                // Не вызываем throw, обрабатываем результат дальше
             } else {
-                codeOutputEditor.setValue(result.error || 'Ошибка трансляции');
-                showMessage(result.error || 'Ошибка при трансляции', 'error');
+                // Успешный ответ (2xx)
+                result = await response.json();
             }
-            
+            // --- КОНЕЦ ИЗМЕНЕНИЯ ---
+
+            // Заполняем поле вывода на основе результата (успешного или с ошибками от API)
+            if (result.success) {
+                // Предположим, что успешный ответ включает translatedCode или output
+                // В вашем API сейчас возвращается только success, errors, message
+                // Поэтому для успешного результата визуально ничего не меняется, кроме сообщения
+                codeOutputEditor.setValue(''); // или result.translatedCode, если он будет
+                showMessage(result.message || 'Анализ завершён успешно', 'success');
+            } else {
+                // Результат содержит ошибки (из API)
+                // Показываем сообщение из API
+                showMessage(result.message || 'Произошла ошибка при анализе', 'error');
+                // Показываем детали ошибок в редакторе вывода
+                let errorMessage = '';
+                if (result.errors && result.errors.length > 0) {
+                    errorMessage = result.errors.map(err => `Line ${err.line}, Column ${err.column}: ${err.message}`).join('\n');
+                } else {
+                    errorMessage = result.message || 'Неизвестная ошибка';
+                }
+                codeOutputEditor.setValue(errorMessage);
+            }
+
         } catch (error) {
-            console.error('Ошибка:', error);
+            // Сюда попадают только **сетевые ошибки** или **ошибки парсинга JSON**, если response.ok был true
+            console.error('Сетевая ошибка или ошибка парсинга JSON:', error);
             codeOutputEditor.setValue(`Ошибка подключения: ${error.message}`);
             showMessage('Ошибка соединения с сервером', 'error');
         } finally {
@@ -152,7 +177,7 @@ document.addEventListener('DOMContentLoaded', function() {
 //     const copyButton = document.querySelector('#Copy');
     
 //     // Базовый URL API
-//     const API_URL = 'http://localhost:5000/api';
+//     const API_URL = 'https://localhost:7240/api/Translator';
     
 //     // Обработка отправки кода
 //     submitButton.addEventListener('click', async function(e) {
