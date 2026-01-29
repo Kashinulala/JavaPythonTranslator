@@ -915,24 +915,22 @@ namespace TranslatorLibrary.SemanticAnalyzer
 
                 if (op == "+")
                 {
-                    // Проверяем, является ли один из операндов строкой
+                    if (resultType == "unknown" || rightOperandType == "unknown")
+                    {
+                        ReportError($"Binary operator '{op}' requires numeric operands, found: {resultType} and {rightOperandType}", infixExpr);
+                        return "unknown";
+                    }
                     if (resultType == "String" || rightOperandType == "String")
                     {
-                        // Если один из операндов - строка, результат - строка (конкатенация)
                         resultType = "String";
-                        // Даже если другой операнд - unknown, результат всё равно String
-                        // Это позволяет выражению вроде "str" + unknown быть "String"
-                        // и не вызывать ошибку проверки типов ниже для '+'
                     }
                     else
                     {
-                        // Если оба операнда не строки, проверяем, являются ли они числовыми
                         if (!IsNumericType(resultType) || !IsNumericType(rightOperandType))
                         {
                             ReportError($"Binary operator '{op}' requires numeric operands, found: {resultType} and {rightOperandType}", infixExpr);
-                            return "unknown"; // или булевый тип для совместимости, но ошибка уже сообщена
+                            return "unknown";
                         }
-                        // Результат арифметической операции зависит от типов операндов
                         resultType = GetArithmeticResultType(resultType, rightOperandType);
                     }
                 }
@@ -1111,9 +1109,9 @@ namespace TranslatorLibrary.SemanticAnalyzer
                             if (indexExpr != null)
                             {
                                 string indexType = GetExpressionType(indexExpr);
-                                if (!IsNumericType(indexType))
+                                if (!IsIntegerType(indexType))
                                 {
-                                    ReportError($"Array index must be numeric, found: {indexType}", indexExpr);
+                                    ReportError($"Array index must be integer, found: {indexType}", indexExpr);
                                     return "unknown";
                                 }
                             }
@@ -1263,15 +1261,7 @@ namespace TranslatorLibrary.SemanticAnalyzer
                                 primaryType = "unknown";
                             }
                         }
-                        else if (suffix is JavaGrammarParser.ClassLiteralSuffixContext classLitSuffix)
-                        {
-                            // Тип суффикса .class - это Class<?>
-                            // Для простоты, просто возвращаем "Class"
-                            // Но это может быть сложнее, если нужно определить тип элемента
-                            // primaryType = "Class";
-                            // return primaryType; // Если .class - это конечный результат
-                        }
-                        // Добавьте другие типы suffix, если они есть
+                        else if (suffix is JavaGrammarParser.ClassLiteralSuffixContext classLitSuffix) {}
                     }
                 }
                 else if (primary is JavaGrammarParser.NewCreatorPrimaryContext newCreatorPrimary)
@@ -1347,25 +1337,28 @@ namespace TranslatorLibrary.SemanticAnalyzer
                             if (indexExpr != null)
                             {
                                 string indexType = GetExpressionType(indexExpr);
-                                if (!IsNumericType(indexType))
+                                if (!IsIntegerType(indexType))
                                 {
-                                    ReportError($"Array index must be numeric, found: {indexType}", indexExpr);
+                                    ReportError($"Array index must be integer, found: {indexType}", indexExpr);
                                     return "unknown";
                                 }
                             }
                         }
-                        // ... (другие типы selector, если добавятся) ...
                     }
                 }
-
-                // Если селекторов нет, возвращаем тип primary
                 return primaryType;
             }
 
             return "unknown";
         }
 
-        // Метод для определения типа выражения 'new'
+        private bool IsIntegerType(string type)
+        {
+            if (type == null) return false;
+            type = type.ToLower();
+            return type == "byte" || type == "short" || type == "int";
+        }
+
         // Метод для определения типа выражения 'new'
         private string GetCreatorType(JavaGrammarParser.CreatorContext creator)
         {
