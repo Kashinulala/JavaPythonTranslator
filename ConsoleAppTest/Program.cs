@@ -1,6 +1,7 @@
 ﻿using Antlr4.Runtime;
 using Antlr4.Runtime.Tree;
 using TranslatorLibrary.SemanticAnalyzer;
+using TranslatorLibrary.CodeGenerator;
 
 string javaCode = File.ReadAllText("../../../JavaCode.java");
 
@@ -36,4 +37,13 @@ if (analyzer.HasErrors)
 else
 {
     Console.WriteLine("SEMANTIC ANALYSIS COMPLETED SUCCESSFULLY. NO ERRORS FOUND.");
+
+    // 6. Запускаем кодогенерацию
+    Console.WriteLine("\n=== GENERATING PYTHON CODE ===");
+    JavaCodeGenerator generator = new JavaCodeGenerator(analyzer.GetSymbolTable());
+    generator.Generate(tree);
+    
+    string pythonCode = generator.GetGeneratedCode();
+    Console.WriteLine(pythonCode);
 }
+

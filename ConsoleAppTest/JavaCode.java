@@ -3,7 +3,7 @@ public class SimpleJavaExample {
     public static void main(String[] args) {
         
         int[] a = new int[10];
-        a[1.5] = 10;
+        a[2] = 10;
         int x = 10;
         int y = 5;
         double result = 0;
@@ -43,9 +43,13 @@ public class SimpleJavaExample {
         }
 
 
-
+        int i = 0;
         while (condition) {
             System.out.println("Loop iteration: " + i);
+            i++;
+            if (i > 3) {
+                break;
+            }
         }
     }
 }
