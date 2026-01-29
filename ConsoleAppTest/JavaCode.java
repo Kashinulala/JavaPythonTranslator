@@ -2,7 +2,8 @@ public class SimpleJavaExample {
 
     public static void main(String[] args) {
         
-        int[] a = new int[10];
+        char[][] ws = new char[2][2];
+        int[] a = new int[5];
         a[2] = 10;
         int x = 10;
         int y = 5;

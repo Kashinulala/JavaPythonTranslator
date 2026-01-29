@@ -1323,43 +1323,105 @@ namespace TranslatorLibrary.CodeGenerator
             return _output;
         }
 
-        public override StringBuilder VisitClassCreator(JavaGrammarParser.ClassCreatorContext context)
+        public override StringBuilder VisitArraySelector(JavaGrammarParser.ArraySelectorContext context)
         {
-            // Создание объекта
-            if (context.createdName() != null)
+            Append("[");
+            if (context.expression() != null)
             {
-                Append(context.createdName().GetText());
+                Visit(context.expression());
             }
-
-            if (context.classCreatorRest()?.arguments() != null)
-            {
-                Append("(");
-                Visit(context.classCreatorRest().arguments());
-                Append(")");
-            }
-
+            Append("]");
             return _output;
         }
 
+        // Исправленный метод для создания массивов базовых типов
         public override StringBuilder VisitArrayCreatorFromBasicType(JavaGrammarParser.ArrayCreatorFromBasicTypeContext context)
         {
-            // Создание массива базового типа: new int[10]
-            string typeName = context.basicType()?.GetText() ?? "int";
-            string defaultValue = GetDefaultValueForType(typeName);
+            string typeName = context.basicType()?.GetText()?.Trim() ?? "int";
+            string defaultValue = GetDefaultValueForType(typeName).Trim();
 
-            // Простая реализация: [default] * размер
-            // В реальности нужно парсить arrayCreatorRest для получения размера
-            Append($"[{defaultValue}] * 10"); // Заглушка: всегда размер 10
+            if (context.arrayCreatorRest() != null)
+            {
+                var rest = context.arrayCreatorRest();
 
+                // Случай 1: инициализация через { ... }
+                if (rest.arrayInitializer() != null)
+                {
+                    Visit(rest.arrayInitializer());
+                    return _output;
+                }
+
+                // Случай 2: создание с указанием размеров (включая многомерные)
+                var expressions = rest.expression();
+                if (expressions != null && expressions.Length > 0)
+                {
+                    GenerateMultidimensionalArray(defaultValue, expressions);
+                    return _output;
+                }
+
+                // Случай 3: пустые скобки без размера (некорректно в Java, но обрабатываем)
+                Append("[]");
+                return _output;
+            }
+
+            // Заглушка на случай ошибки
+            Append("[]");
             return _output;
         }
 
+        // Исправленный метод для создания массивов объектов/классов
         public override StringBuilder VisitArrayCreatorFromClass(JavaGrammarParser.ArrayCreatorFromClassContext context)
         {
-            // Создание массива класса: new String[10]
-            Append("[None] * 10"); // Заглушка: всегда размер 10
+            // Для массивов объектов используем None как значение по умолчанию
+            string defaultValue = "None";
 
+            if (context.arrayCreatorRest() != null)
+            {
+                var rest = context.arrayCreatorRest();
+
+                // Случай 1: инициализация через { ... }
+                if (rest.arrayInitializer() != null)
+                {
+                    Visit(rest.arrayInitializer());
+                    return _output;
+                }
+
+                // Случай 2: создание с указанием размеров
+                var expressions = rest.expression();
+                if (expressions != null && expressions.Length > 0)
+                {
+                    GenerateMultidimensionalArray(defaultValue, expressions);
+                    return _output;
+                }
+
+                Append("[]");
+                return _output;
+            }
+
+            Append("[]");
             return _output;
+        }
+
+        /// <summary>
+        /// Генерирует код для многомерного массива с заданными размерами
+        /// Пример: [3][4] -> [[0 for _ in range(4)] for _ in range(3)]
+        /// </summary>
+        private void GenerateMultidimensionalArray(string defaultValue, JavaGrammarParser.ExpressionContext[] sizes, int index = 0)
+        {
+            // Базовый случай: достигли самого глубокого уровня
+            if (index >= sizes.Length)
+            {
+                Append(defaultValue);
+                return;
+            }
+
+            // Рекурсивно генерируем вложенные списки
+            // Для измерения [n] генерируем: [внутренний_массив for _ in range(n)]
+            Append("[");
+            GenerateMultidimensionalArray(defaultValue, sizes, index + 1);
+            Append(" for _ in range(");
+            Visit(sizes[index]);
+            Append(")]");
         }
 
         #endregion
@@ -1662,16 +1724,16 @@ namespace TranslatorLibrary.CodeGenerator
             return VisitChildren(context);
         }
 
-        public override StringBuilder VisitArraySelector(JavaGrammarParser.ArraySelectorContext context)
-        {
-            Append("[");
-            if (context.expression() != null)
-            {
-                Visit(context.expression());
-            }
-            Append("]");
-            return _output;
-        }
+        //public override StringBuilder VisitArraySelector(JavaGrammarParser.ArraySelectorContext context)
+        //{
+        //    Append("[");
+        //    if (context.expression() != null)
+        //    {
+        //        Visit(context.expression());
+        //    }
+        //    Append("]");
+        //    return _output;
+        //}
 
         public override StringBuilder VisitBasicType(JavaGrammarParser.BasicTypeContext context)
         {
