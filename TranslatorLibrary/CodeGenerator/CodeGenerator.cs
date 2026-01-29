@@ -369,7 +369,7 @@ namespace TranslatorLibrary.CodeGenerator
         public override StringBuilder VisitLocalVariableDeclarationStatement(
             JavaGrammarParser.LocalVariableDeclarationStatementContext context)
         {
-            AppendIndent();
+            //AppendIndent();
             VisitChildren(context);
             AppendLine("");
             return _output;
@@ -406,7 +406,7 @@ namespace TranslatorLibrary.CodeGenerator
         public override StringBuilder VisitAssignmentExpression(JavaGrammarParser.AssignmentExpressionContext context)
         {
             var expressions = context.expression();
-            AppendIndent();
+            //AppendIndent();
             if (expressions.Length >= 2)
             {
                 // Левая часть
@@ -578,7 +578,7 @@ namespace TranslatorLibrary.CodeGenerator
 
         public override StringBuilder VisitIfStatement(JavaGrammarParser.IfStatementContext context)
         {
-            AppendIndent();
+            //AppendIndent();
             Append("if ");
 
             // Условие
@@ -1137,6 +1137,7 @@ namespace TranslatorLibrary.CodeGenerator
             {
                 foreach (var stmt in context.blockStatement())
                 {
+                    AppendIndent();
                     Visit(stmt);
                 }
             }
