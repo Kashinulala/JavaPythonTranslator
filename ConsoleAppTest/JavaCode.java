@@ -35,9 +35,9 @@ public class SimpleJavaExample {
                 break;
         }
 
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 6; i++) {
             if(i == 3){
-                continue;
+                break;
             }
             System.out.println("Loop iteration: " + i);
         }

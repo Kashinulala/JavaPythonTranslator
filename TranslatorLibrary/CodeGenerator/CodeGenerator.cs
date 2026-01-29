@@ -493,13 +493,28 @@ namespace TranslatorLibrary.CodeGenerator
 
         public override StringBuilder VisitPostfixExpression(JavaGrammarParser.PostfixExpressionContext context)
         {
-            // Обрабатываем первичное выражение
+            // Обрабатываем первичное выражение (идентификатор)
             if (context.primary() != null)
             {
                 Visit(context.primary());
             }
 
-            // Постфиксные операторы обрабатываются как отдельные операторы в цикле
+            // Обрабатываем постфиксный оператор (++ или --)
+            var postfixOp = context.postfixOp();
+            if (postfixOp != null)
+            {
+                // Для постфиксного оператора в отдельном выражении (например, просто "i++")
+                // нужно сгенерировать операцию инкремента/декремента как отдельный оператор
+                if (postfixOp.INC() != null)
+                {
+                    AppendLine(" += 1");
+                }
+                else if (postfixOp.DEC() != null)
+                {
+                    AppendLine(" -= 1");
+                }
+            }
+
             return _output;
         }
 
@@ -619,7 +634,7 @@ namespace TranslatorLibrary.CodeGenerator
             _loopStack.Push(loopLabel);
             _inLoop = true;
 
-            AppendIndent();
+            //AppendIndent();
             Append("while ");
 
             // Условие
@@ -688,29 +703,267 @@ namespace TranslatorLibrary.CodeGenerator
 
         public override StringBuilder VisitForStatement(JavaGrammarParser.ForStatementContext context)
         {
-            _inLoop = true;
-            string loopLabel = $"for_loop_{_loopStack.Count}";
-            _loopStack.Push(loopLabel);
-
-            // Обрабатываем управление циклом
-            if (context.forControl() != null)
+            if (context.forControl() is JavaGrammarParser.TraditionalForControlContext traditionalFor)
             {
-                if (context.forControl() is JavaGrammarParser.TraditionalForControlContext traditionalFor)
-                {
-                    // Традиционный for: for (int i = 0; i < 3; i++)
-                    // Преобразуем в: i = 0; while i < 3: ... i += 1
+                // Традиционный for: for (int i = 0; i < 3; i++)
+                // Пытаемся преобразовать в for i in range(...)
 
-                    // Инициализация
-                    if (traditionalFor.forInit() != null)
+                string varName = "i"; // имя переменной по умолчанию
+                string startValue = "0";
+                string endCondition = "";
+                string stepValue = "1";
+                bool canConvertToRange = true;
+
+                // 1. Извлекаем инициализацию (forInit)
+                if (traditionalFor.forInit() != null)
+                {
+                    var forInit = traditionalFor.forInit();
+
+                    // Вариант 1: Объявление переменной в for (int i = 0)
+                    if (forInit.forDeclarationContext() != null)
                     {
-                        Visit(traditionalFor.forInit());
-                        AppendLine("");
+                        var declContext = forInit.forDeclarationContext();
+                        var varDecls = declContext.variableDeclarators();
+                        if (varDecls != null && varDecls.variableDeclarator().Length > 0)
+                        {
+                            var firstVar = varDecls.variableDeclarator()[0];
+
+                            // Имя переменной
+                            varName = firstVar.identifier()?.GetText() ?? "i";
+
+                            // Начальное значение
+                            if (firstVar.variableDeclaratorRest()?.variableInitializer() != null)
+                            {
+                                AppendIndent();
+                                Append($"{varName} = ");
+                                Visit(firstVar.variableDeclaratorRest().variableInitializer());
+                                AppendLine("");
+
+                                // Сохраняем начальное значение для range
+                                var initializerText = firstVar.variableDeclaratorRest().variableInitializer().GetText();
+                                if (!string.IsNullOrEmpty(initializerText))
+                                {
+                                    startValue = initializerText;
+                                }
+                            }
+                        }
+                    }
+                    // Вариант 2: Присваивание без объявления типа (i = 0)
+                    else if (forInit.statementExpression() != null && forInit.statementExpression().Length > 0)
+                    {
+                        // Присваивание без объявления типа: i = 0
+                        var exprList = forInit.statementExpression();
+                        if (exprList.Length > 0)
+                        {
+                            var firstExpr = exprList[0];
+                            var expr = firstExpr.expression();
+
+                            // Обрабатываем присваивание
+                            if (expr is JavaGrammarParser.AssignmentExpressionContext assignExpr)
+                            {
+                                // Левая часть - имя переменной
+                                if (assignExpr.expression().Length > 0)
+                                {
+                                    var leftExpr = assignExpr.expression()[0];
+                                    if (leftExpr != null)
+                                    {
+                                        varName = leftExpr.GetText();
+
+                                        AppendIndent();
+                                        Append($"{varName} = ");
+
+                                        // Правая часть - начальное значение
+                                        if (assignExpr.expression().Length > 1)
+                                        {
+                                            Visit(assignExpr.expression()[1]);
+                                            startValue = assignExpr.expression()[1].GetText();
+                                        }
+                                        AppendLine("");
+                                    }
+                                }
+                            }
+                            // Обрабатываем инкремент/декремент (i++)
+                            else if (expr is JavaGrammarParser.PrimaryExpressionContext primExpr)
+                            {
+                                // Для случая for (i = 0; ...) нужно искать присваивание в primary
+                                // Упрощенная обработка
+                                varName = primExpr.GetText();
+                                AppendIndent();
+                                Append($"{varName} = 0");
+                                AppendLine("");
+                                startValue = "0";
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    // Нет инициализации, цикл может использовать уже объявленную переменную
+                    canConvertToRange = false;
+                }
+
+                // 2. Извлекаем условие
+                if (traditionalFor.expression() != null)
+                {
+                    var condition = traditionalFor.expression();
+                    var conditionText = condition.GetText();
+
+                    // Пытаемся распарсить условие вида i < 10, i <= n, и т.д.
+                    if (conditionText.Contains("<="))
+                    {
+                        var parts = conditionText.Split(new[] { "<=" }, StringSplitOptions.None);
+                        if (parts.Length == 2 && parts[0].Trim() == varName)
+                        {
+                            endCondition = parts[1].Trim();
+                            // Для range нужно +1 к конечному значению при <=
+                            endCondition = $"{endCondition} + 1";
+                        }
+                        else
+                        {
+                            canConvertToRange = false;
+                        }
+                    }
+                    else if (conditionText.Contains("<"))
+                    {
+                        var parts = conditionText.Split('<');
+                        if (parts.Length == 2 && parts[0].Trim() == varName)
+                        {
+                            endCondition = parts[1].Trim();
+                        }
+                        else
+                        {
+                            canConvertToRange = false;
+                        }
+                    }
+                    else if (conditionText.Contains(">="))
+                    {
+                        var parts = conditionText.Split(new[] { ">=" }, StringSplitOptions.None);
+                        if (parts.Length == 2 && parts[0].Trim() == varName)
+                        {
+                            endCondition = parts[1].Trim();
+                            // Для range с отрицательным шагом
+                            stepValue = "-1";
+                            startValue = endCondition;
+                            endCondition = $"{startValue} - 1";
+                        }
+                        else
+                        {
+                            canConvertToRange = false;
+                        }
+                    }
+                    else if (conditionText.Contains(">"))
+                    {
+                        var parts = conditionText.Split('>');
+                        if (parts.Length == 2 && parts[0].Trim() == varName)
+                        {
+                            endCondition = parts[1].Trim();
+                            stepValue = "-1";
+                        }
+                        else
+                        {
+                            canConvertToRange = false;
+                        }
+                    }
+                    else
+                    {
+                        // Нестандартное условие
+                        canConvertToRange = false;
+                    }
+                }
+                else
+                {
+                    // Нет условия - бесконечный цикл
+                    canConvertToRange = false;
+                }
+
+                // 3. Извлекаем шаг (forUpdate)
+                if (traditionalFor.forUpdate() != null)
+                {
+                    var forUpdate = traditionalFor.forUpdate();
+                    var stmtExprs = forUpdate.statementExpression(); // Уже массив
+
+                    if (stmtExprs != null && stmtExprs.Length > 0)
+                    {
+                        var firstUpdate = stmtExprs[0];
+                        var updateText = firstUpdate.GetText();
+
+                        // Обрабатываем i++ или i += 1
+                        if (updateText == $"{varName}++" || updateText == $"{varName} += 1")
+                        {
+                            stepValue = "1";
+                        }
+                        // Обрабатываем i--
+                        else if (updateText == $"{varName}--" || updateText == $"{varName} -= 1")
+                        {
+                            stepValue = "-1";
+                        }
+                        // Обрабатываем i += n
+                        else if (updateText.StartsWith($"{varName} += "))
+                        {
+                            stepValue = updateText.Substring($"{varName} += ".Length);
+                        }
+                        // Обрабатываем i -= n
+                        else if (updateText.StartsWith($"{varName} -= "))
+                        {
+                            var step = updateText.Substring($"{varName} -= ".Length);
+                            stepValue = $"-{step}";
+                        }
+                        else if (updateText == $"{varName}++" || updateText == $"{varName}--")
+                        {
+                            // Уже обработано выше
+                        }
+                        else
+                        {
+                            // Нестандартное обновление
+                            canConvertToRange = false;
+                        }
+                    }
+                }
+                else
+                {
+                    // Нет обновления - возможно, цикл без изменения переменной
+                    canConvertToRange = false;
+                }
+
+                // 4. Генерируем цикл for с range или while
+                if (canConvertToRange && !string.IsNullOrEmpty(endCondition))
+                {
+                    // Генерируем for с range
+                    AppendIndent();
+
+                    if (stepValue == "1")
+                    {
+                        AppendLine($"for {varName} in range({startValue}, {endCondition}):");
+                    }
+                    else if (stepValue == "-1")
+                    {
+                        // Для обратного цикла
+                        AppendLine($"for {varName} in range({startValue}, {endCondition}, -1):");
+                    }
+                    else
+                    {
+                        AppendLine($"for {varName} in range({startValue}, {endCondition}, {stepValue}):");
                     }
 
-                    AppendIndent();
-                    Append("while ");
+                    IncreaseIndent();
 
-                    // Условие
+                    // Тело цикла
+                    if (context.statement() != null)
+                    {
+                        Visit(context.statement());
+                    }
+
+                    DecreaseIndent();
+                }
+                else
+                {
+                    // Если не удалось распарсить в range, генерируем while как запасной вариант
+
+                    // Инициализация уже сгенерирована выше (если была)
+
+                    AppendIndent();
+                    Append($"while ");
+
                     if (traditionalFor.expression() != null)
                     {
                         Visit(traditionalFor.expression());
@@ -730,48 +983,68 @@ namespace TranslatorLibrary.CodeGenerator
                         Visit(context.statement());
                     }
 
-                    // Обновление (в конце тела цикла)
+                    // Обновление переменной
                     if (traditionalFor.forUpdate() != null)
                     {
                         AppendIndent();
-                        VisitForUpdate(traditionalFor.forUpdate());
+                        Visit(traditionalFor.forUpdate());
                         AppendLine("");
                     }
 
                     DecreaseIndent();
                 }
-                else if (context.forControl() is JavaGrammarParser.EnhancedForControlContext enhancedFor)
-                {
-                    // Enhanced for (for-each): for (int item : collection)
-                    AppendIndent();
-                    Append("for ");
-
-                    if (enhancedFor.forVarControl() != null &&
-                        enhancedFor.forVarControl().variableDeclaratorId() != null)
-                    {
-                        string varName = enhancedFor.forVarControl().variableDeclaratorId().GetText();
-                        Append($"{varName} in ");
-                    }
-
-                    // Ищем выражение коллекции
-                    Append("collection"); // Заглушка
-
-                    AppendLine(":");
-
-                    IncreaseIndent();
-
-                    // Тело цикла
-                    if (context.statement() != null)
-                    {
-                        Visit(context.statement());
-                    }
-
-                    DecreaseIndent();
-                }
             }
+            else if (context.forControl() is JavaGrammarParser.EnhancedForControlContext enhancedFor)
+            {
+                // Enhanced for (for-each): for (int item : collection)
+                AppendIndent();
+                Append("for ");
 
-            _loopStack.Pop();
-            _inLoop = _loopStack.Count > 0;
+                if (enhancedFor.forVarControl() != null &&
+                    enhancedFor.forVarControl().variableDeclaratorId() != null)
+                {
+                    string varName = enhancedFor.forVarControl().variableDeclaratorId().GetText();
+                    Append($"{varName} in ");
+                }
+
+                // Выражение коллекции
+                //if (enhancedFor.expression() != null)
+                //{
+                //    Visit(enhancedFor.expression());
+                //}
+                //else
+                //{
+                //    Append("collection"); // Заглушка
+                //}
+
+                AppendLine(":");
+
+                IncreaseIndent();
+
+                // Тело цикла
+                if (context.statement() != null)
+                {
+                    Visit(context.statement());
+                }
+
+                DecreaseIndent();
+            }
+            else
+            {
+                // Неизвестный тип for, генерируем while
+                AppendIndent();
+                AppendLine("while True:");
+
+                IncreaseIndent();
+
+                // Тело цикла
+                if (context.statement() != null)
+                {
+                    Visit(context.statement());
+                }
+
+                DecreaseIndent();
+            }
 
             return _output;
         }
@@ -935,7 +1208,7 @@ namespace TranslatorLibrary.CodeGenerator
 
         public override StringBuilder VisitBreakStatement(JavaGrammarParser.BreakStatementContext context)
         {
-            AppendIndent();
+            //AppendIndent();
 
             if (_inLoop || _inSwitch)
             {
@@ -943,7 +1216,7 @@ namespace TranslatorLibrary.CodeGenerator
             }
             else
             {
-                AppendLine("break  # Warning: break outside loop or switch");
+                AppendLine("break");
             }
 
             return _output;
@@ -951,7 +1224,7 @@ namespace TranslatorLibrary.CodeGenerator
 
         public override StringBuilder VisitContinueStatement(JavaGrammarParser.ContinueStatementContext context)
         {
-            AppendIndent();
+            //AppendIndent();
 
             if (_inLoop)
             {
@@ -959,7 +1232,7 @@ namespace TranslatorLibrary.CodeGenerator
             }
             else
             {
-                AppendLine("continue  # Warning: continue outside loop");
+                AppendLine("continue");
             }
 
             return _output;
