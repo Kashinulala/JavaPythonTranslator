@@ -111,6 +111,10 @@ namespace TranslatorLibrary.CodeGenerator
                 @"System\.out\.print\((.*?)\)",
                 match => $"print({match.Groups[1].Value}, end='')");
 
+            // Исправляем конкатенацию строк: "строка" + число/переменная -> "строка" + str(число/переменная)
+            // Это простое исправление, которое работает для большинства случаев
+            code = FixStringConcatenation(code);
+
             _output.Clear();
             _output.Append(code);
 
@@ -122,6 +126,31 @@ namespace TranslatorLibrary.CodeGenerator
                 _output.Append("    ");
                 _output.AppendLine("main()");
             }
+        }
+
+        private string FixStringConcatenation(string code)
+        {
+            // Паттерн для поиска конкатенации строки с чем-либо: "строка" + что-то
+            // Группа 1: строка в кавычках (двойных или одинарных)
+            // Группа 2: выражение после +
+            string pattern = @"(""[^""]*""|'[^']*')\s*\+\s*([^,\n;\)]+)";
+
+            // Заменяем все найденные конкатенации
+            return System.Text.RegularExpressions.Regex.Replace(
+                code,
+                pattern,
+                match =>
+                {
+                    string stringLiteral = match.Groups[1].Value;
+                    string expression = match.Groups[2].Value.Trim();
+
+                    // Убираем возможные скобки вокруг выражения
+                    expression = expression.TrimStart('(').TrimEnd(')');
+
+                    // Оборачиваем выражение в str()
+                    return $"{stringLiteral} + str({expression})";
+                },
+                System.Text.RegularExpressions.RegexOptions.Singleline);
         }
 
         #endregion
