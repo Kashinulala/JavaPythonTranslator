@@ -8,19 +8,19 @@ namespace JavaPythonTranslator.Controllers
     [ApiController]
     public class TranslatorController : ControllerBase
     {
-        private readonly IJavaAnalyzerService _javaAnalyzerService;
+        private readonly IJavaTranslatorService _javaAnalyzerService;
 
-        public TranslatorController(IJavaAnalyzerService javaAnalyzerService)
+        public TranslatorController(IJavaTranslatorService javaAnalyzerService)
         {
             _javaAnalyzerService = javaAnalyzerService;
         }
 
-        [HttpPost("analyze")]
-        public async Task<IActionResult> AnalyzeJavaCode([FromBody] AnalyzeRequest request)
+        [HttpPost("translate")]
+        public async Task<IActionResult> AnalyzeJavaCode([FromBody] TranslatorRequest request)
         {
             if (request == null || string.IsNullOrWhiteSpace(request.JavaCode))
             {
-                return BadRequest(new AnalyzeResponse
+                return BadRequest(new TranslatorResponse
                 {
                     Success = false,
                     Message = "Java code is required."
@@ -41,7 +41,7 @@ namespace JavaPythonTranslator.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new AnalyzeResponse
+                return StatusCode(500, new TranslatorResponse
                 {
                     Success = false,
                     Message = $"An internal server error occurred: {ex.Message}"

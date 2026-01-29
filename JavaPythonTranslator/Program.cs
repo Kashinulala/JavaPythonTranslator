@@ -7,12 +7,12 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddScoped<IJavaAnalyzerService, JavaAnalyzerService>();
+builder.Services.AddScoped<IJavaTranslatorService, JavaTranslatorService>();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("http://192.168.0.10:8080")
+        policy.WithOrigins("http://127.0.0.1:8080")
               .AllowAnyHeader()
               .AllowAnyMethod();
     });

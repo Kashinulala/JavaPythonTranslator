@@ -1,17 +1,18 @@
 ﻿using Antlr4.Runtime;
 using Antlr4.Runtime.Tree;
 using JavaPythonTranslator.Models;
+using TranslatorLibrary.CodeGenerator;
 using TranslatorLibrary.SemanticAnalyzer;
 
 namespace JavaPythonTranslator.Services
 {
-    public class JavaAnalyzerService : IJavaAnalyzerService
+    public class JavaTranslatorService : IJavaTranslatorService
     {
-        public async Task<AnalyzeResponse> AnalyzeCodeAsync(string javaCode)
+        public async Task<TranslatorResponse> AnalyzeCodeAsync(string javaCode)
         {
             if (string.IsNullOrWhiteSpace(javaCode))
             {
-                return new AnalyzeResponse
+                return new TranslatorResponse
                 {
                     Success = false,
                     Message = "Java code is required."
@@ -38,7 +39,7 @@ namespace JavaPythonTranslator.Services
                 var syntaxErrors = syntaxErrorListener.SyntaxErrors.ToList();
                 if (syntaxErrors.Any())
                 {
-                    return new AnalyzeResponse
+                    return new TranslatorResponse
                     {
                         Success = false,
                         Message = "Syntax errors found.",
@@ -49,7 +50,7 @@ namespace JavaPythonTranslator.Services
                 SemanticAnalyzer analyzer = new SemanticAnalyzer();
                 analyzer.Visit(tree);
 
-                var response = new AnalyzeResponse();
+                var response = new TranslatorResponse();
                 syntaxErrors = syntaxErrorListener.SyntaxErrors.ToList();
                 if (syntaxErrors.Any())
                 {
@@ -75,8 +76,12 @@ namespace JavaPythonTranslator.Services
                 }
                 else
                 {
+                    JavaCodeGenerator generator = new JavaCodeGenerator(analyzer.GetSymbolTable());
+                    generator.Generate(tree);
+                    string pythonCode = generator.GetGeneratedCode();
                     response.Success = true;
-                    response.Message = "Analysis completed successfully. No syntax or semantic errors found.";
+                    response.Message = "Code translated successfully.";
+                    response.TranslatedCode = pythonCode;
                 }
 
                 return response;

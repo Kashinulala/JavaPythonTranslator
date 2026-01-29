@@ -1,6 +1,6 @@
 ﻿namespace JavaPythonTranslator.Models
 {
-    public class AnalyzeRequest
+    public class TranslatorRequest
     {
         public string JavaCode { get; set; } = string.Empty;
     }
