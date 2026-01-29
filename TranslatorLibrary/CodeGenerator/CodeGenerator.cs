@@ -707,6 +707,7 @@ namespace TranslatorLibrary.CodeGenerator
             {
                 // Традиционный for: for (int i = 0; i < 3; i++)
                 // Пытаемся преобразовать в for i in range(...)
+                _inLoop = true;
 
                 string varName = "i"; // имя переменной по умолчанию
                 string startValue = "0";
@@ -734,7 +735,7 @@ namespace TranslatorLibrary.CodeGenerator
                             // Начальное значение
                             if (firstVar.variableDeclaratorRest()?.variableInitializer() != null)
                             {
-                                AppendIndent();
+                                //AppendIndent();
                                 Append($"{varName} = ");
                                 Visit(firstVar.variableDeclaratorRest().variableInitializer());
                                 AppendLine("");
@@ -1046,6 +1047,7 @@ namespace TranslatorLibrary.CodeGenerator
                 DecreaseIndent();
             }
 
+            _inLoop = false;
             return _output;
         }
 
@@ -1178,18 +1180,18 @@ namespace TranslatorLibrary.CodeGenerator
                                 }
                                 else if (label is JavaGrammarParser.DefaultLabelContext)
                                 {
-                                    Append("else:");
+                                    //Append("else:");
                                     AppendLine("");
 
-                                    IncreaseIndent();
+                                    //IncreaseIndent();
 
-                                    // Тело default
-                                    if (group.blockStatements() != null)
-                                    {
-                                        Visit(group.blockStatements());
-                                    }
+                                    //// Тело default
+                                    //if (group.blockStatements() != null)
+                                    //{
+                                    //    Visit(group.blockStatements());
+                                    //}
 
-                                    DecreaseIndent();
+                                    //DecreaseIndent();
                                 }
                             }
                         }
@@ -1210,13 +1212,13 @@ namespace TranslatorLibrary.CodeGenerator
         {
             //AppendIndent();
 
-            if (_inLoop || _inSwitch)
+            if (_inLoop)
             {
                 AppendLine("break");
             }
             else
             {
-                AppendLine("break");
+                AppendLine("");
             }
 
             return _output;
