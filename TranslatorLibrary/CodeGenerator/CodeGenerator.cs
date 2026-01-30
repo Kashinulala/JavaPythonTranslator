@@ -328,13 +328,22 @@ namespace TranslatorLibrary.CodeGenerator
 
         public override StringBuilder VisitFormalParameters(JavaGrammarParser.FormalParametersContext context)
         {
+            // Для метода main всегда генерируем пустые параметры ()
+            if (_currentMethodName == "main")
+            {
+                //Append("");
+                return _output;
+            }
+
             if (context.formalParameterDecls() != null)
             {
+                Append("(");
                 Visit(context.formalParameterDecls());
+                Append(")");
             }
             else
             {
-                Append(""); // Пустые параметры
+                Append("()"); // Пустые параметры
             }
 
             return _output;
