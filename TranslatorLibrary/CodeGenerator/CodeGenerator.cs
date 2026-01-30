@@ -1164,72 +1164,109 @@ namespace TranslatorLibrary.CodeGenerator
                 Visit(context.parExpression().expression());
                 AppendLine("");
 
+                // Сначала собираем все кейсы и их тела
+                var caseGroups = new List<(bool isDefault, string caseValue, JavaGrammarParser.BlockStatementsContext body)>();
+                bool hasDefault = false;
+
                 if (context.switchBlockStatementGroups() != null)
                 {
-                    bool firstCase = true;
-
                     foreach (var group in context.switchBlockStatementGroups().switchBlockStatementGroup())
                     {
                         if (group.switchLabels() != null)
                         {
                             foreach (var label in group.switchLabels().switchLabel())
                             {
-                                AppendIndent();
-
-                                if (label is JavaGrammarParser.CaseExprLabelContext caseLabel)
+                                if (label is JavaGrammarParser.DefaultLabelContext)
                                 {
-                                    if (firstCase)
+                                    if (label.GetText().Split(':')[1] == "")
                                     {
-                                        Append("if ");
-                                        firstCase = false;
+                                        hasDefault = false;
                                     }
                                     else
                                     {
-                                        Append("elif ");
+                                        hasDefault = true;
+                                        caseGroups.Add((true, null, group.blockStatements()));
                                     }
-
-                                    Append($"{switchVar} == ");
-
-                                    if (caseLabel.expression() != null)
-                                    {
-                                        Visit(caseLabel.expression());
-                                    }
-
-                                    AppendLine(":");
-
-                                    IncreaseIndent();
-
-                                    // Тело case
-                                    if (group.blockStatements() != null)
-                                    {
-                                        Visit(group.blockStatements());
-                                    }
-
-                                    DecreaseIndent();
+                                    break; // default может быть только один в группе
                                 }
-                                else if (label is JavaGrammarParser.DefaultLabelContext)
+                                else if (label is JavaGrammarParser.CaseExprLabelContext caseLabel)
                                 {
-                                    //Append("else:");
-                                    AppendLine("");
-
-                                    //IncreaseIndent();
-
-                                    //// Тело default
-                                    //if (group.blockStatements() != null)
-                                    //{
-                                    //    Visit(group.blockStatements());
-                                    //}
-
-                                    //DecreaseIndent();
+                                    string caseValue = caseLabel.expression()?.GetText() ?? "unknown";
+                                    caseGroups.Add((false, caseValue, group.blockStatements()));
                                 }
+                                // CaseEnumLabelContext игнорируем для простоты (редко используется в учебных примерах)
                             }
                         }
                     }
                 }
+
+                // Генерируем if-elif цепочку для обычных кейсов
+                bool firstCase = true;
+                foreach (var (isDefault, caseValue, body) in caseGroups)
+                {
+                    if (isDefault) continue; // default обработаем в конце
+
+                    AppendIndent();
+                    if (firstCase)
+                    {
+                        Append("if ");
+                        firstCase = false;
+                    }
+                    else
+                    {
+                        Append("elif ");
+                    }
+
+                    Append($"{switchVar} == {caseValue}:");
+                    AppendLine("");
+
+                    IncreaseIndent();
+
+                    // Тело кейса (может быть пустым)
+                    if (body != null && body.blockStatement() != null && body.blockStatement().Length > 0)
+                    {
+                        Visit(body);
+                    }
+                    else
+                    {
+                        AppendIndent();
+                        AppendLine("pass");
+                    }
+
+                    DecreaseIndent();
+                }
+
+                // Генерируем else для default кейса (если он есть)
+                if (hasDefault)
+                {
+                    AppendIndent();
+                    AppendLine("else:");
+
+                    IncreaseIndent();
+
+                    // Находим тело первого default кейса
+                    var defaultGroup = caseGroups.FirstOrDefault(g => g.isDefault);
+                    if (defaultGroup.body != null && defaultGroup.body.blockStatement() != null && defaultGroup.body.blockStatement().Length > 0)
+                    {
+                        Visit(defaultGroup.body);
+                    }
+                    else
+                    {
+                        // Даже если тело пустое - генерируем pass для корректного синтаксиса Python
+                        AppendIndent();
+                        AppendLine("pass");
+                    }
+
+                    DecreaseIndent();
+                }
+                else if (firstCase) // Если не было ни одного кейса вообще
+                {
+                    AppendIndent();
+                    AppendLine("pass # Empty switch statement");
+                }
             }
 
             _inSwitch = false;
-
             return _output;
         }
 
