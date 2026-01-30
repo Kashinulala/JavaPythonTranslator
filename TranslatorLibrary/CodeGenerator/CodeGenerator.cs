@@ -765,8 +765,10 @@ namespace TranslatorLibrary.CodeGenerator
                             if (firstVar.variableDeclaratorRest()?.variableInitializer() != null)
                             {
                                 //AppendIndent();
-                                Append($"{varName} = ");
-                                Visit(firstVar.variableDeclaratorRest().variableInitializer());
+
+                                //????????
+                                //Append($"{varName} = ");
+                                //Visit(firstVar.variableDeclaratorRest().variableInitializer());
                                 AppendLine("");
 
                                 // Сохраняем начальное значение для range
